@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Signing you in…</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body {
+            background-color: #0d0a14;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        /* Classic Apex Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(168, 85, 247, 0.2);
+            border-top-color: #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
+        p { color: #a09ab0; font-size: 14px; }
+
+        /* Error Box */
+        #error-box {
+            background: rgba(242, 54, 69, 0.1);
+            border: 1px solid #f23645;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            max-width: 400px;
+            width: 100%;
+            text-align: left;
+            margin-top: 20px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+        #error-box b { color: #f23645; }
+        #error-box span { color: #fff; font-size: 13px; line-height: 1.5; display: block; margin-top: 8px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Brand Logo */
+        .logo-text {
+            font-weight: 800;
+            font-size: 24px;
+            letter-spacing: 1px;
+            color: #fff;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        .logo-text span { color: #a855f7; }
+    </style>
+</head>
+<body>
+
+    <div class="logo-text">APEX<span>.</span></div>
+
+    <div class="spinner" id="spinner"></div>
+    <h2 id="status">Authenticating...</h2>
+    <p id="sub-status">Please wait while we verify your secure session.</p>
+
+    <div id="error-box">
+        <b>Authentication Error</b>
+        <span id="error-text"></span>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const supabase = createClient(
+            'https://pjxhrnivrhnnnbpnduwh.supabase.co',
+            'sb_publishable_8yA4Ly2r0P2LfP17Nl-Omg_5q3pfkhN'
+        );
+
+        const API_BASE_URL = 'https://apexline-market.onrender.com';
+        
+        const spinner = document.getElementById('spinner');
+        const statusEl = document.getElementById('status');
+        const subStatusEl = document.getElementById('sub-status');
+        const errorBox = document.getElementById('error-box');
+        const errorText = document.getElementById('error-text');
+
+        (async () => {
+            // 1. Wait a moment for Supabase to read the URL hash
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 2. Get the Supabase Session
+            const { data, error } = await supabase.auth.getSession();
+
+            if (error || !data?.session) {
+                spinner.style.display = 'none';
+                statusEl.innerText = "Login Failed";
+                subStatusEl.innerText = "Could not retrieve session. Redirecting back...";
+                setTimeout(() => window.location.replace('index.html'), 2500);
+                return;
+            }
+
+            const user = data.session.user;
+            const email = user.email;
+            const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
+
+            // 3. Update UI
+            statusEl.innerText = "Syncing Account...";
+            subStatusEl.innerText = "Connecting to Apex database.";
+
+            // 4. Send to backend
+            try {
+                const res = await fetch(`${API_BASE_URL}/login/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, fullName: fullName, supabase_id: user.id })
+                });
+                
+                const out = await res.json();
+                console.log("Backend response:", out);
+
+                if (!res.ok || out.success === false) {
+                    throw new Error(out.message || 'Database sync failed.');
+                }
+
+            } catch (e) {
+                console.warn('Backend connection failed:', e);
+                spinner.style.display = 'none';
+                statusEl.innerText = "Connection Error";
+                subStatusEl.innerText = "Failed to connect to the server.";
+                errorBox.style.display = 'block';
+                errorText.innerHTML = `${e.message || 'Unknown error'}<br><br>Please check if the Render server is awake and try again.`;
+                return;
+            }
+
+            // 5. Save locally and redirect
+            statusEl.innerText = "Success!";
+            subStatusEl.innerText = "Redirecting to your dashboard...";
+            
+            localStorage.setItem('nexoraUser', JSON.stringify({ 
+                id: user.id, // 🔥 CRITICAL FIX: This makes the dashboard work!
+                email: email, 
+                full_name: fullName, 
+                provider: 'google', 
+                supabase_id: user.id 
+            }));
+            localStorage.setItem('nexoraToken', data.session.access_token);
+            
+            setTimeout(() => {
+                window.location.replace('dashboard.html');
+            }, 500);
+        })();
+    </script>
+</body>
+</html>

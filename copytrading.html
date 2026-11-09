@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ledger Smart Market | Copy Trading</title>
+
+    <script>
+    (function () {
+      const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+      const LOGIN_PAGE = 'index.html';
+      const LAST_SEEN_KEY = 'nexoraLastSeen';
+      const WRITE_THROTTLE_MS = 30_000;
+      const currentPage = location.pathname.split('/').pop() || 'index.html';
+      const isLoginPage = currentPage === LOGIN_PAGE;
+      const AUTH_KEYS = ['nexoraUser', 'nexoraToken', 'nexoraJoinedAt', 'nexoraLastSeen'];
+      const SESSION_KEYS = ['popupShown', 'nexoraState'];
+      const clearAuth = () => { AUTH_KEYS.forEach(k => localStorage.removeItem(k)); SESSION_KEYS.forEach(k => sessionStorage.removeItem(k)); };
+      const logout = () => { clearAuth(); if (!isLoginPage) location.replace(LOGIN_PAGE); };
+      const isExpired = (t) => t > 0 && (Date.now() - t) > IDLE_TIMEOUT_MS;
+      if (!isLoginPage && !localStorage.getItem('nexoraUser')) { location.replace(LOGIN_PAGE); return; }
+      const lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
+      if (isExpired(lastSeen)) { logout(); return; }
+      let lastWrite = Date.now();
+      localStorage.setItem(LAST_SEEN_KEY, String(lastWrite));
+      const touch = () => { const t = Date.now(); if (t - lastWrite < WRITE_THROTTLE_MS) return; lastWrite = t; localStorage.setItem(LAST_SEEN_KEY, String(t)); };
+      ['click','keydown','scroll','touchstart','pointerdown'].forEach(evt => window.addEventListener(evt, touch, { passive: true }));
+      document.addEventListener('visibilitychange', () => { if (document.hidden) return; const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0); if (isExpired(t)) logout(); });
+      window.addEventListener('pageshow', (e) => { if (e.persisted && !localStorage.getItem('nexoraUser')) location.replace(LOGIN_PAGE); });
+      setInterval(() => { const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0); if (!t) return; if (isExpired(t)) { logout(); return; } }, 15_000);
+    })();
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="i18n.js" defer></script>
+
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --bg-panel: #0f0f12;
+            --bg-panel-hover: #17171b;
+            --primary-bright: #f0b90b;
+            --primary-glow: rgba(240,185,11,0.35);
+            --primary-teal: #1ebba3;
+            --primary-red: #f23645;
+            --text-white: #ffffff;
+            --text-gray: #9b9ba3;
+            --border-color: #2a2a2e;
+            --input-bg: #141418;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --sidebar-bg-top: #14120a;
+            --sidebar-bg-bottom: #000000;
+            --sidebar-hover: rgba(240,185,11,0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); -webkit-tap-highlight-color: transparent; }
+        
+        /* ✅ Removed white space and bounce effect */
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            background: #050505 !important; 
+            overscroll-behavior-y: none;
+            width: 100%; 
+            max-width: 100vw; 
+            overflow-x: hidden; 
+        }
+        body { 
+            background: linear-gradient(180deg, #131315 0%, #070708 45%, #030303 100%) fixed; 
+            color: var(--text-white); 
+            line-height: 1.5; 
+            padding-bottom: 80px; 
+            -webkit-font-smoothing: antialiased; 
+            min-height: 100vh;
+        }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        body[dir="rtl"] { direction: rtl; text-align: right; }
+        body[dir="rtl"] .sidebar { left: auto; right: -320px; }
+        body[dir="rtl"] .sidebar.active { right: 0; left: auto; }
+        body[dir="rtl"] .sidebar-nav li a { flex-direction: row-reverse; }
+        body[dir="rtl"] .notif-panel { right: auto; left: 12px; }
+        body[dir="rtl"] .notif-badge { right: auto; left: -8px; }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+        button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+        /* ================= SPINNER ================= */
+        .global-loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 5, 0.82); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            opacity: 0; visibility: hidden; transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .global-loader-overlay.active { opacity: 1; visibility: visible; }
+        .ios-spinner { position: relative; width: 48px; height: 48px; animation: iosSpinDecay 1.2s cubic-bezier(0.45, 0.05, 0.15, 1) infinite; }
+        .ios-spinner .dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; background-color: var(--primary-bright); box-shadow: 0 0 12px rgba(240,185,11,0.5); }
+        .ios-spinner .dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .ios-spinner .dot:nth-child(2) { bottom: 6px; right: 4px; }
+        .ios-spinner .dot:nth-child(3) { bottom: 6px; left: 4px; }
+        @keyframes iosSpinDecay { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
+
+        /* ================= TOAST ================= */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; }
+        .toast { background: #141414; border: 1px solid #2a2a2e; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: slideDown 0.3s ease; pointer-events: auto; }
+        .toast.error { border-left: 4px solid var(--primary-red); }
+        .toast.success { border-left: 4px solid var(--primary-teal); }
+        .toast.info { border-left: 4px solid var(--primary-bright); }
+        .toast svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; }
+        .toast.error svg { fill: var(--primary-red); }
+        .toast.success svg { fill: var(--primary-teal); }
+        .toast.info svg { fill: var(--primary-bright); }
+        .toast-text { font-size: 14px; line-height: 1.4; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= MODALS ================= */
+        .confirm-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s; padding: 20px; }
+        .confirm-modal-overlay.active { opacity: 1; visibility: visible; }
+        .confirm-modal-box { background: linear-gradient(180deg, #0f0f12, #17171b); border: 1px solid var(--border-color); border-radius: 20px; width: 100%; max-width: 380px; padding: 30px 25px; text-align: center; position: relative; overflow: hidden; transform: scale(0.95) translateY(10px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8); }
+        .confirm-modal-overlay.active .confirm-modal-box { transform: scale(1) translateY(0); }
+        .confirm-modal-icon { width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; background: rgba(240,185,11,0.1); border: 1.5px solid rgba(240,185,11,0.3); color: var(--primary-bright); }
+        .confirm-modal-icon.success { background: rgba(30, 187, 163, 0.1); border-color: rgba(30, 187, 163, 0.3); color: var(--primary-teal); }
+        .confirm-modal-icon.danger { background: rgba(242, 54, 69, 0.1); border-color: rgba(242, 54, 69, 0.3); color: var(--primary-red); }
+        .confirm-modal-icon svg { width: 32px; height: 32px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        .confirm-modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+        .confirm-modal-desc { font-size: 14px; color: var(--text-gray); line-height: 1.5; margin-bottom: 25px; }
+        .confirm-modal-desc strong { color: #fff; font-weight: 600; }
+        .confirm-modal-actions { display: flex; gap: 12px; }
+        .confirm-btn { flex: 1; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; transition: all 0.2s; display: flex; justify-content: center; align-items: center; }
+        .confirm-btn.cancel { background: rgba(255, 255, 255, 0.05); color: #fff; border: 1px solid var(--border-color); }
+        .confirm-btn.cancel:hover { background: rgba(255, 255, 255, 0.1); }
+        .confirm-btn.action-primary { background: linear-gradient(135deg, #f0b90b 0%, #fcd535 100%); color: #0a0a0a; box-shadow: 0 4px 15px rgba(240,185,11,0.3); }
+        .confirm-btn.action-primary:hover { transform: translateY(-1px); }
+        .confirm-btn.action-danger { background: var(--primary-red); color: #fff; box-shadow: 0 4px 15px rgba(242,54,69,0.3); }
+        .confirm-btn.action-danger:hover { transform: translateY(-1px); }
+
+        /* ================= HEADER ================= */
+        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background-color: rgba(0,0,0,0.92); border-bottom: 1px solid rgba(240,185,11,0.25); position: sticky; top: 0; z-index: 1000; width: 100%; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); flex-shrink: 0; }
+        .header-icon { width: 28px; height: 28px; fill: #ffffff; cursor: pointer; flex-shrink: 0; }
+        .header-logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+        /* ============ NOTIFICATIONS ============ */
+        .notif-btn { position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .notif-btn svg { width: 26px; height: 26px; fill: none; stroke: #ffffff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 10%; }
+        .notif-btn.ring svg { animation: bellRing 0.9s ease; }
+        @keyframes bellRing { 0% { transform: rotate(0); } 15% { transform: rotate(18deg); } 30% { transform: rotate(-16deg); } 45% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 75% { transform: rotate(4deg); } 100% { transform: rotate(0); } }
+        .notif-badge { position: absolute; top: -7px; right: -9px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--primary-red); color: #fff; font-size: 11px; font-weight: 700; display: none; align-items: center; justify-content: center; border: 2px solid #000; line-height: 1; }
+        .notif-badge.active { display: flex; }
+
+        .notif-panel { position: fixed; top: 64px; right: 12px; width: 380px; max-width: calc(100vw - 24px); max-height: 70vh; background: var(--bg-panel); border: 1px solid rgba(240,185,11,0.25); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); z-index: 1500; display: none; flex-direction: column; overflow: hidden; animation: slideUp 0.25s ease; }
+        .notif-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #f0b90b, transparent); }
+        .notif-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 18px 12px; border-bottom: 1px solid var(--border-color); }
+        .notif-panel-header h3 { font-size: 16px; font-weight: 700; color: white; }
+        .notif-mark-all { font-size: 12px; font-weight: 600; color: var(--primary-bright); padding: 4px 0; }
+        .notif-mark-all:hover { text-decoration: underline; }
+        .notif-list { overflow-y: auto; flex: 1; }
+        .notif-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.2s; position: relative; }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: rgba(240,185,11,0.05); }
+        .notif-item.unread { background: rgba(240,185,11,0.07); }
+        .notif-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(240,185,11,0.14); color: var(--primary-bright); }
+        .notif-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .notif-icon.deposit { background: rgba(30, 187, 163, 0.15); color: var(--primary-teal); }
+        .notif-icon.withdrawal { background: rgba(242, 54, 69, 0.15); color: var(--primary-red); }
+        .notif-icon.alert { background: rgba(242, 54, 69, 0.15); color: var(--primary-red); }
+        .notif-icon.kyc { background: rgba(212, 160, 23, 0.15); color: #f0c040; }
+        .notif-icon.bonus { background: rgba(30, 187, 163, 0.15); color: var(--primary-teal); }
+        .notif-icon.copytrade { background: rgba(240,185,11,0.14); color: #fcd535; }
+        .notif-body { flex: 1; min-width: 0; }
+        .notif-title { font-size: 14px; font-weight: 600; color: white; line-height: 1.3; margin-bottom: 2px; }
+        .notif-text { font-size: 13px; color: var(--text-gray); line-height: 1.45; word-wrap: break-word; overflow-wrap: anywhere; }
+        .notif-time { font-size: 11px; color: #808080; margin-top: 5px; }
+        .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-bright); box-shadow: 0 0 8px var(--primary-bright); flex-shrink: 0; margin-top: 6px; visibility: hidden; }
+        .notif-item.unread .notif-dot { visibility: visible; }
+        .notif-empty { padding: 40px 20px; text-align: center; color: var(--text-gray); font-size: 13px; }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1999; display: none; opacity: 0; transition: opacity 0.3s; }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+
+        .sidebar { position: fixed; top: 0; left: -110%; width: 300px; max-width: 85vw; height: 100vh; height: 100dvh; background: linear-gradient(180deg, var(--sidebar-bg-top) 0%, var(--sidebar-bg-bottom) 100%); z-index: 2000; padding: 0; transition: left 0.3s ease; box-shadow: 5px 0 25px rgba(0,0,0,0.8); display: flex; flex-direction: column; border-right: 1px solid rgba(240,185,11,0.18); }
+        .sidebar.active { left: 0; }
+
+        .sidebar-header { padding: 16px 20px 24px; display: flex; align-items: center; gap: 12px; }
+
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 0 15px; }
+        .sidebar-nav ul { display: flex; flex-direction: column; gap: 5px; }
+        .sidebar-nav li a { display: flex; align-items: center; gap: 15px; padding: 15px 20px; border-radius: 8px; color: #e0e0e0; font-size: 16px; font-weight: 500; transition: all 0.2s; }
+        .sidebar-nav li a:hover, .sidebar-nav li.active a { background-color: var(--sidebar-hover); color: #f0b90b; }
+        .sidebar-nav li a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .sidebar-nav li a .sign-out { fill: currentColor; stroke: none; }
+
+        .sidebar-footer { padding: 20px; border-top: 1px solid rgba(240,185,11,0.15); }
+
+        /* ================= LEDGER LOGO ================= */
+        .ltm-logo { width: 40px; height: 40px; flex-shrink: 0; display: block; filter: drop-shadow(0 4px 14px rgba(240,185,11,0.18)); }
+        .sidebar-header .ltm-logo { width: 48px; height: 48px; }
+
+        .logo-text h1 { font-size: 17px; font-weight: 800; letter-spacing: 1.2px; line-height: 1; }
+        .logo-text span { font-size: 8px; letter-spacing: 1.8px; color: #9a9aa3; margin-top: 2px; display: block; font-weight: 600; }
+
+        .sidebar-header .logo-text h1 { font-size: 22px; }
+        .sidebar-header .logo-text span { font-size: 9px; color: #ddd; letter-spacing: 1.8px; }
+
+        /* ================= MAIN CONTENT ================= */
+        .container { padding: 20px 16px 60px; max-width: 800px; margin: 0 auto; width: 100%; }
+        .page-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; color: #ffffff; letter-spacing: -0.5px; }
+        .page-subtitle { font-size: 14px; color: var(--text-gray); margin-bottom: 25px; line-height: 1.5; }
+
+        .copy-trading-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 40px; }
+        @media (min-width: 600px) { .copy-trading-grid { grid-template-columns: repeat(2, 1fr); } }
+        
+        .trader-card { background: linear-gradient(160deg, #0f0f12, #17171b); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
+        .trader-card:hover { border-color: rgba(240,185,11,0.4); transform: translateY(-3px); box-shadow: 0 15px 40px rgba(0,0,0,0.5), 0 0 30px rgba(240,185,11,0.05); }
+        .trader-card::before { content: ''; position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(240,185,11,0.08) 0%, transparent 70%); border-radius: 50%; z-index: 0; pointer-events: none; }
+        
+        .trader-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; position: relative; z-index: 1; }
+        .trader-avatar { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-bright); padding: 2px; background: var(--bg-dark); flex-shrink: 0; box-shadow: 0 0 15px rgba(240,185,11,0.2); }
+        .trader-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .trader-info h3 { font-size: 17px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; }
+        .trader-badge { background: rgba(30, 187, 163, 0.15); color: var(--primary-teal); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; }
+        .trader-badge.pro { background: rgba(240,185,11,0.15); color: #fcd535; }
+        .trader-badge.legend { background: rgba(242, 54, 69, 0.15); color: var(--primary-red); }
+        
+        .trader-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; position: relative; z-index: 1; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
+        .t-stat { display: flex; flex-direction: column; gap: 4px; }
+        .t-label { font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .t-val { font-size: 15px; font-weight: 700; color: var(--text-white); }
+        .text-green { color: var(--primary-teal); text-shadow: 0 0 10px rgba(30,187,163,0.3); }
+        
+        .copy-action { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; margin-top: auto; }
+        .copy-amount { width: 100%; padding: 14px 15px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-size: 15px; outline: none; transition: all 0.2s; }
+        .copy-amount:focus { border-color: var(--primary-bright); box-shadow: 0 0 0 3px rgba(240,185,11,0.15); }
+        .copy-amount::placeholder { color: #6c6c75; }
+        
+        .btn-copy { width: 100%; background: linear-gradient(135deg, #f0b90b 0%, #fcd535 100%); color: #0a0a0a; font-size: 15px; font-weight: 800; padding: 14px; border-radius: 8px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(240,185,11,0.25); letter-spacing: 0.3px; }
+        .btn-copy:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,185,11,0.35); }
+        .btn-copy:active { transform: scale(0.98); }
+        .btn-copy:disabled { cursor: wait; opacity: 0.7; }
+        .btn-copy[data-following="true"] { background: rgba(30, 187, 163, 0.1); color: var(--primary-teal); border: 1px solid var(--primary-teal); box-shadow: none; font-size: 13px; }
+        .btn-copy[data-following="true"]:hover { background: rgba(30, 187, 163, 0.15); }
+
+        /* LEDGER aligned to SMART MARKET width */
+        .logo-text, .brand-splash-text { display: inline-flex; flex-direction: column; align-items: stretch; }
+        .logo-text h1, .brand-splash-text h1 { display: flex; justify-content: space-between; letter-spacing: 0 !important; font-weight: 800 !important; padding: 0 !important; line-height: 1; background: none !important; -webkit-text-fill-color: #f0b90b !important; color: #f0b90b !important; filter: none !important; }
+        .logo-text h1 { font-size: 20px !important; }
+        .sidebar-header .logo-text h1 { font-size: 22px !important; }
+        .logo-text h1 span, .brand-splash-text h1 span { display: block; font-size: inherit; font-weight: inherit; letter-spacing: 0; margin: 0; padding: 0; color: inherit; -webkit-text-fill-color: inherit; }
+        .logo-text > span { text-align: justify; text-align-last: justify; margin-right: 0 !important; color: #9d9d9d !important; }
+        
+        @media (max-width: 360px) { .container { padding: 15px; } .trader-card { padding: 15px; } .trader-info h3 { font-size: 15px; } }
+    </style>
+</head>
+<body>
+
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <linearGradient id="ltmMetal" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#fcd535"/><stop offset=".55" stop-color="#f0b90b"/><stop offset="1" stop-color="#b98a08"/>
+            </linearGradient>
+            <linearGradient id="ltmBg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#26262b"/><stop offset="1" stop-color="#050505"/>
+            </linearGradient>
+        </defs>
+        <symbol id="ltmMark" viewBox="0 0 64 64">
+            <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#ltmBg)" stroke="url(#ltmMetal)" stroke-width="1.6"/>
+            <rect x="6.5" y="6.5" width="51" height="51" rx="12" fill="none" stroke="#f0b90b" stroke-opacity=".28" stroke-width="1"/>
+            <path d="M21 15 V47 H46" fill="none" stroke="url(#ltmMetal)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M28 40 L34 33 L39 37 L47 26" fill="none" stroke="#fcd535" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="47" cy="26" r="2.8" fill="#fcd535"/>
+        </symbol>
+    </svg>
+
+    <div class="global-loader-overlay" id="globalLoader">
+        <div class="ios-spinner">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="confirm-modal-overlay" id="confirmModalOverlay">
+        <div class="confirm-modal-box">
+            <div class="confirm-modal-icon" id="confirmIcon">
+                <svg id="confirmIconSvg" viewBox="0 0 24 24"></svg>
+            </div>
+            <h3 class="confirm-modal-title" id="confirmTitle">Confirm Action</h3>
+            <p class="confirm-modal-desc" id="confirmDesc">Are you sure you want to proceed?</p>
+            <div class="confirm-modal-actions">
+                <button class="confirm-btn cancel" id="confirmCancelBtn">Cancel</button>
+                <button class="confirm-btn action-primary" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <svg class="ltm-logo" role="img" aria-label="Ledger Smart Market logo"><use href="#ltmMark"/></svg>
+            <div class="logo-text">
+                <h1>LEDGER</h1>
+                <span>SMART MARKET</span>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <ul>
+                <li><a href="dashboard.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg><span data-i18n="menu_dashboard">Dashboard</span></a></li>
+                <li class="active"><a href="copytrading.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-i18n="menu_copy">Copy Trading</span></a></li>
+                <li><a href="account.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span data-i18n="menu_account">Account</span></a></li>
+                <li><a href="deposit.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span data-i18n="menu_deposit">Deposit</span></a></li>
+                <li><a href="withdrawal.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><polyline points="22 10 2 10 2 15 22 15"/><line x1="7" y1="15" x2="7" y2="15"/></svg><span data-i18n="menu_withdraw">Withdraw</span></a></li>
+                <li><a href="referral.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span data-i18n="menu_referral">Referral Program</span></a></li>
+                <li><a href="kyc.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 15h4"/></svg><span data-i18n="menu_kyc">KYC</span></a></li>
+                <li><a href="settings.html" class="nav-link"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span data-i18n="menu_settings">Settings</span></a></li>
+                <li><a href="support.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg><span data-i18n="menu_support">Support</span></a></li>
+                <li style="margin-top:20px;"><a href="#" onclick="logout(); return false;"><svg class="sign-out" viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg><span data-i18n="menu_signout">Sign Out</span></a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer"><div data-lang-dd></div></div>
+    </div>
+
+    <header class="app-header">
+        <svg class="header-icon" id="hamburgerBtn" viewBox="0 0 24 24" onclick="openSidebar()"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        <div class="header-logo">
+            <svg class="ltm-logo" role="img" aria-label="Ledger Smart Market logo"><use href="#ltmMark"/></svg>
+            <div class="logo-text">
+                <h1>LEDGER</h1>
+                <span>SMART MARKET</span>
+            </div>
+        </div>
+        <div class="notif-btn" id="notifBtn" onclick="toggleNotifPanel(event)" aria-label="Notifications">
+            <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge" id="notifBadge">0</span>
+        </div>
+    </header>
+
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-panel-header">
+            <h3>Notifications</h3>
+            <button class="notif-mark-all" onclick="markAllNotifRead()">Mark all as read</button>
+        </div>
+        <div class="notif-list" id="notifList"></div>
+    </div>
+
+    <main class="container">
+        <h2 class="page-title">Copy Trading</h2>
+        <p class="page-subtitle">Enter an amount and mirror an expert trader. Your balance will be allocated to the copy trade and grow with their performance.</p>
+
+        <div class="copy-trading-grid">
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" alt="Harry Sam"></div>
+                    <div class="trader-info"><h3>HARRY SAM</h3><span class="trader-badge">Expert</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">3,928</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">192,824</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">85%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">15%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt1">
+                    <button class="btn-copy" onclick="executeCopy('Harry Sam','amt1',event)" data-trader="Harry Sam" data-badge="Expert">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Elena Rostova"></div>
+                    <div class="trader-info"><h3>ELENA ROSTOVA</h3><span class="trader-badge pro">Pro</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">1,204</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">84,102</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">78%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">22%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt2">
+                    <button class="btn-copy" onclick="executeCopy('Elena Rostova','amt2',event)" data-trader="Elena Rostova" data-badge="Pro">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" alt="Marcus Chen"></div>
+                    <div class="trader-info"><h3>MARCUS CHEN</h3><span class="trader-badge legend">Legend</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">8,502</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">312,050</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">91%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">18%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt3">
+                    <button class="btn-copy" onclick="executeCopy('Marcus Chen','amt3',event)" data-trader="Marcus Chen" data-badge="Legend">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Sarah Jenkins"></div>
+                    <div class="trader-info"><h3>SARAH JENKINS</h3><span class="trader-badge">Expert</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">2,115</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">105,230</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">82%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">14%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt4">
+                    <button class="btn-copy" onclick="executeCopy('Sarah Jenkins','amt4',event)" data-trader="Sarah Jenkins" data-badge="Expert">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=150&q=80" alt="David Osei"></div>
+                    <div class="trader-info"><h3>DAVID OSEI</h3><span class="trader-badge pro">Pro</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">945</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">42,190</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">75%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">28%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt5">
+                    <button class="btn-copy" onclick="executeCopy('David Osei','amt5',event)" data-trader="David Osei" data-badge="Pro">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=150&q=80" alt="Yuki Tanaka"></div>
+                    <div class="trader-info"><h3>YUKI TANAKA</h3><span class="trader-badge">Expert</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">3,401</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">150,400</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">88%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">12%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt6">
+                    <button class="btn-copy" onclick="executeCopy('Yuki Tanaka','amt6',event)" data-trader="Yuki Tanaka" data-badge="Expert">Copy Trader</button>
+                </div>
+            </div>
+
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1507591064344-4c6ce005b128?auto=format&fit=crop&w=150&q=80" alt="Alex Volkov"></div>
+                    <div class="trader-info"><h3>ALEX VOLKOV</h3><span class="trader-badge legend">Legend</span></div>
+                </div>
+                <div class="trader-stats">
+                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">12,882</span></div>
+                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">450,110</span></div>
+                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">94%</span></div>
+                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">35%</span></div>
+                </div>
+                <div class="copy-action">
+                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt7">
+                    <button class="btn-copy" onclick="executeCopy('Alex Volkov','amt7',event)" data-trader="Alex Volkov" data-badge="Legend">Copy Trader</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+        const API_BASE_URL = 'https://apexline-market.onrender.com';
+
+        const userStr = localStorage.getItem('nexoraUser');
+        if (!userStr) { window.location.replace('index.html'); throw new Error('Not authenticated'); }
+
+        let currentUser;
+        try { currentUser = JSON.parse(userStr); }
+        catch (e) {
+            ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'].forEach(k => localStorage.removeItem(k));
+            window.location.replace('index.html');
+            throw new Error('Invalid auth state');
+        }
+
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const countryCurrencyCodes = {
+            'France': 'EUR',
+            'Germany': 'EUR',
+            'United Kingdom': 'GBP',
+            'Canada': 'CAD',
+            'Australia': 'AUD'
+        };
+        const currencySymbols = {
+            'USD': '$', 'EUR': '€', 'GBP': '£', 'CAD': 'C$', 'AUD': 'A$'
+        };
+        const getCurrencyCode = () => countryCurrencyCodes[currentUser?.country] || 'USD';
+        const getCurrencySymbol = () => currencySymbols[getCurrencyCode()] || '$';
+
+        const loader = document.getElementById('globalLoader');
+        function showLoader() { loader.classList.add('active'); }
+        function hideLoader() { loader.classList.remove('active'); }
+
+        function showToast(type, message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let iconSvg = '';
+            if (type === 'success') iconSvg = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+            else if (type === 'error') iconSvg = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+            else iconSvg = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+            toast.innerHTML = `${iconSvg}<div class="toast-text">${message}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        function showCustomConfirm(title, desc, type = 'primary') {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('confirmModalOverlay');
+                const iconWrap = document.getElementById('confirmIcon');
+                const iconSvg = document.getElementById('confirmIconSvg');
+                const titleEl = document.getElementById('confirmTitle');
+                const descEl = document.getElementById('confirmDesc');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+                const okBtn = document.getElementById('confirmOkBtn');
+
+                titleEl.textContent = title;
+                descEl.innerHTML = desc;
+
+                iconWrap.className = 'confirm-modal-icon';
+                okBtn.className = 'confirm-btn action-primary';
+
+                if (type === 'danger') {
+                    iconWrap.classList.add('danger');
+                    okBtn.classList.add('action-danger');
+                    iconSvg.innerHTML = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>';
+                } else if (type === 'success') {
+                    iconWrap.classList.add('success');
+                    iconSvg.innerHTML = '<path d="M20 6L9 17l-5-5"></path>';
+                } else {
+                    iconSvg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>';
+                }
+
+                overlay.classList.add('active');
+
+                const cleanup = (result) => {
+                    overlay.classList.remove('active');
+                    cancelBtn.onclick = null;
+                    okBtn.onclick = null;
+                    resolve(result);
+                };
+
+                cancelBtn.onclick = () => cleanup(false);
+                okBtn.onclick = () => cleanup(true);
+            });
+        }
+
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('active');
+            document.getElementById('sidebarOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function logout() {
+            ['nexoraUser', 'nexoraToken', 'nexoraJoinedAt', 'nexoraLastSeen'].forEach(k => localStorage.removeItem(k));
+            ['popupShown', 'nexoraState', 'apexLoginAnimShown', 'apexLoginNotified'].forEach(k => sessionStorage.removeItem(k));
+            window.location.replace('index.html');
+        }
+
+        // ================= NOTIFICATIONS =================
+        const NOTIF_KEY = `apexNotif_${currentUser.id}`;
+        const NOTIF_ICONS = {
+            welcome:    '<path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/>',
+            login:      '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
+            deposit:    '<path d="M12 19V5M5 12l7-7 7 7"/>',
+            withdrawal: '<path d="M12 5v14M5 12l7 7 7-7"/>',
+            copytrade:  '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
+            trade:      '<path d="M3 3v18h18M7 14l4-4 4 4 5-6"/>',
+            kyc:        '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 15h4"/>',
+            bonus:      '<path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+            alert:      '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+        };
+
+        function loadNotifState() {
+            try {
+                const s = JSON.parse(localStorage.getItem(NOTIF_KEY) || 'null');
+                if (s && typeof s === 'object') {
+                    return { init: !!s.init, read: Array.isArray(s.read) ? s.read : [], seen: s.seen || {}, local: Array.isArray(s.local) ? s.local : [] };
+                }
+            } catch (e) {}
+            return { init: false, read: [], seen: {}, local: [] };
+        }
+        function saveNotifState() {
+            try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifState)); } catch (e) {}
+        }
+
+        let notifState = loadNotifState();
+        let notifSources = { txns: [], kyc: null, suspended: false, txnsLoaded: false, accountLoaded: false };
+        let notifPanelOpen = false;
+
+        function seedLocalEvents() {
+            notifState = loadNotifState();
+            const first = ((currentUser.full_name || '').split(' ')[0]) || 'there';
+            const hasWelcome = notifState.local.some(e => e.id === 'welcome');
+            if (!hasWelcome) {
+                notifState.local.push({
+                    id: 'welcome', kind: 'welcome',
+                    title: `Welcome to Ledger Smart Market, ${first}!`,
+                    text: 'Your account is ready. Deposit funds, verify your identity and start trading or copy an expert trader. Everything happening on your account will appear here.',
+                    time: Date.now()
+                });
+            } else if (!sessionStorage.getItem('apexLoginNotified')) {
+                notifState.local.push({
+                    id: 'login-' + Date.now(), kind: 'login',
+                    title: 'Signed in', text: 'You signed in to your account.', time: Date.now()
+                });
+                const logins = notifState.local.filter(e => e.kind === 'login');
+                if (logins.length > 10) {
+                    const drop = new Set(logins.slice(0, logins.length - 10).map(e => e.id));
+                    notifState.local = notifState.local.filter(e => !drop.has(e.id));
+                }
+            }
+            try { sessionStorage.setItem('apexLoginNotified', '1'); } catch (e) {}
+            saveNotifState();
+        }
+
+        function describeTxn(txn) {
+            const sym = getCurrencySymbol();
+            const amt = `${sym}${txn.amount_display || parseFloat(txn.amount || 0).toFixed(2)}`;
+            const status = (txn.status || '').toLowerCase();
+            switch (txn.type) {
+                case 'Deposit':
+                    if (status === 'pending')  return { kind: 'deposit', title: 'Deposit pending', text: `Your deposit of ${amt} is awaiting confirmation.` };
+                    if (status === 'rejected') return { kind: 'alert', title: 'Deposit rejected', text: `Your deposit of ${amt} was not approved. Contact support if you need help.` };
+                    return { kind: 'deposit', title: 'Deposit approved', text: `${amt} has been added to your balance.` };
+                case 'Withdrawal':
+                    if (status === 'pending')  return { kind: 'withdrawal', title: 'Withdrawal requested', text: `Your withdrawal of ${amt} is awaiting approval.` };
+                    if (status === 'rejected') return { kind: 'alert', title: 'Withdrawal rejected', text: `Your withdrawal of ${amt} was not approved. Contact support if you need help.` };
+                    return { kind: 'withdrawal', title: 'Withdrawal approved', text: `Your withdrawal of ${amt} has been approved.` };
+                case 'Copy Out':
+                case 'Copy Trade':
+                    return { kind: 'copytrade', title: 'Copy trade started', text: `${amt} was allocated to a copy trade.` };
+                case 'Copy In':
+                    return { kind: 'copytrade', title: 'Copy trade closed', text: `${amt} was returned to your balance.` };
+                case 'Crypto':
+                case 'Forex':
+                case 'Trade': {
+                    const label = txn.type === 'Trade' ? 'Trade' : `${txn.type} trade`;
+                    if (status === 'rejected') return { kind: 'alert', title: `${label} failed`, text: `Your ${label.toLowerCase()} of ${amt} could not be completed.` };
+                    return { kind: 'trade', title: `${label} placed`, text: `Your ${label.toLowerCase()} of ${amt} was placed successfully.` };
+                }
+                case 'Referral Bonus':
+                case 'Bonus':
+                    return { kind: 'bonus', title: 'Bonus received', text: `You received a bonus of ${amt}.` };
+                case 'Profit':
+                    return { kind: 'bonus', title: 'Profit credited', text: `${amt} profit was credited to your balance.` };
+                case 'Refund':
+                    return { kind: 'deposit', title: 'Refund issued', text: `${amt} was refunded to your balance.` };
+                default:
+                    return { kind: 'trade', title: txn.type || 'Account activity', text: `${txn.type || 'Activity'} of ${amt}${txn.status ? ' — ' + txn.status : ''}.` };
+            }
+        }
+
+        function buildNotifCandidates() {
+            const list = [];
+            const txns = (notifSources.txns || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 50);
+            txns.forEach(txn => {
+                const d = describeTxn(txn);
+                const tid = txn.id != null ? txn.id : `${txn.type}|${txn.created_at}|${txn.amount}`;
+                const t = new Date(txn.created_at).getTime();
+                list.push({ id: `txn:${tid}:${txn.status}`, kind: d.kind, title: d.title, text: d.text, srcTime: Number.isFinite(t) ? t : Date.now() });
+            });
+
+            const kyc = notifSources.kyc;
+            if (kyc && kyc.status) {
+                const t = new Date(kyc.submitted_at).getTime();
+                const srcTime = Number.isFinite(t) ? t : Date.now();
+                const kid = `kyc:${kyc.status}:${kyc.submitted_at || ''}`;
+                if (kyc.status === 'Approved') list.push({ id: kid, kind: 'kyc', title: 'Identity verified', text: 'Your KYC was approved. You now have full access and higher withdrawal limits.', srcTime });
+                else if (kyc.status === 'Rejected') list.push({ id: kid, kind: 'alert', title: 'KYC not approved', text: kyc.rejection_reason ? `Reason: ${kyc.rejection_reason}` : 'Your documents could not be verified. Please resubmit clearer documents.', srcTime });
+                else list.push({ id: kid, kind: 'kyc', title: 'KYC under review', text: 'We received your documents and our team is reviewing them.', srcTime });
+            }
+
+            if (notifSources.suspended) {
+                list.push({ id: 'account:suspended', kind: 'alert', title: 'Account suspended', text: 'Your account has been suspended. Please contact support for assistance.', srcTime: Date.now() });
+            }
+            return list;
+        }
+
+        function getNotifItems() {
+            const read = new Set(notifState.read);
+            const items = notifState.local.map(e => ({ id: e.id, kind: e.kind, title: e.title, text: e.text, time: e.time }));
+            buildNotifCandidates().forEach(c => {
+                if (c.id in notifState.seen) items.push({ id: c.id, kind: c.kind, title: c.title, text: c.text, time: notifState.seen[c.id] });
+            });
+            items.sort((a, b) => b.time - a.time);
+            items.forEach(i => { i.read = read.has(i.id); });
+            return items.slice(0, 60);
+        }
+
+        function timeAgo(ts) {
+            const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+            if (s < 60) return 'Just now';
+            const m = Math.floor(s / 60);
+            if (m < 60) return `${m} min ago`;
+            const h = Math.floor(m / 60);
+            if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`;
+            const d = Math.floor(h / 24);
+            if (d < 7) return `${d} day${d > 1 ? 's' : ''} ago`;
+            return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function renderNotifications() {
+            const items = getNotifItems();
+            const unread = items.filter(i => !i.read).length;
+
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                badge.innerText = unread > 99 ? '99+' : String(unread);
+                badge.classList.toggle('active', unread > 0);
+            }
+
+            const list = document.getElementById('notifList');
+            if (!list) return;
+            if (items.length === 0) {
+                list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+                return;
+            }
+            list.innerHTML = items.map(i => `
+                <div class="notif-item ${i.read ? '' : 'unread'}" data-id="${escapeHtml(i.id)}">
+                    <div class="notif-icon ${escapeHtml(i.kind)}"><svg viewBox="0 0 24 24">${NOTIF_ICONS[i.kind] || NOTIF_ICONS.trade}</svg></div>
+                    <div class="notif-body">
+                        <div class="notif-title">${escapeHtml(i.title)}</div>
+                        <div class="notif-text">${escapeHtml(i.text)}</div>
+                        <div class="notif-time">${timeAgo(i.time)}</div>
+                    </div>
+                    <span class="notif-dot"></span>
+                </div>
+            `).join('');
+        }
+
+        function syncNotifications() {
+            const stored = loadNotifState();
+            notifState.read = Array.from(new Set([...stored.read, ...notifState.read]));
+            notifState.seen = Object.assign({}, stored.seen, notifState.seen);
+            notifState.init = notifState.init || stored.init;
+
+            const cands = buildNotifCandidates();
+            const ready = notifSources.txnsLoaded && notifSources.accountLoaded;
+            const justInit = !notifState.init && ready;
+            const arrived = [];
+
+            cands.forEach(c => {
+                if (c.id in notifState.seen) return;
+                if (justInit) {
+                    notifState.seen[c.id] = c.srcTime;
+                    notifState.read.push(c.id);
+                } else if (notifState.init) {
+                    notifState.seen[c.id] = Date.now();
+                    arrived.push(c);
+                }
+            });
+            if (justInit) notifState.init = true;
+            if (notifState.read.length > 500) notifState.read = notifState.read.slice(-500);
+            saveNotifState();
+            renderNotifications();
+
+            if (arrived.length) {
+                const btn = document.getElementById('notifBtn');
+                if (btn) { btn.classList.add('ring'); setTimeout(() => btn.classList.remove('ring'), 900); }
+                arrived.slice(0, 2).forEach(c => showToast('info', escapeHtml(c.title)));
+            }
+        }
+
+        function markNotifRead(id) {
+            if (!notifState.read.includes(id)) {
+                notifState.read.push(id);
+                saveNotifState();
+                renderNotifications();
+            }
+        }
+
+        function markAllNotifRead() {
+            getNotifItems().forEach(i => { if (!notifState.read.includes(i.id)) notifState.read.push(i.id); });
+            saveNotifState();
+            renderNotifications();
+        }
+
+        function openNotifPanel() {
+            document.getElementById('notifPanel').style.display = 'flex';
+            notifPanelOpen = true;
+            renderNotifications();
+        }
+        function closeNotifPanel() {
+            document.getElementById('notifPanel').style.display = 'none';
+            notifPanelOpen = false;
+            markAllNotifRead();
+        }
+        function toggleNotifPanel(e) {
+            if (e) e.stopPropagation();
+            if (notifPanelOpen) closeNotifPanel(); else openNotifPanel();
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!notifPanelOpen) return;
+            if (e.target.closest('#notifPanel') || e.target.closest('#notifBtn')) return;
+            closeNotifPanel();
+        });
+        document.getElementById('notifList').addEventListener('click', (e) => {
+            const item = e.target.closest('.notif-item');
+            if (item && item.dataset.id) markNotifRead(item.dataset.id);
+        });
+
+        async function fetchNotifSources() {
+            if (!currentUser || !currentUser.id) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/user/${currentUser.id}`);
+                const data = await res.json();
+                if (data.success && data.user) notifSources.suspended = !!data.user.is_suspended;
+            } catch (e) { /* optional */ }
+            finally { notifSources.accountLoaded = true; }
+
+            try {
+                const kycRes = await fetch(`${API_BASE_URL}/kyc/status/${currentUser.id}`);
+                const kycData = await kycRes.json();
+                notifSources.kyc = (kycRes.ok && kycData.success && kycData.kyc && kycData.kyc.status) ? kycData.kyc : null;
+            } catch (e) { /* KYC status is optional for notifications */ }
+
+            try {
+                const txRes = await fetch(`${API_BASE_URL}/transactions/${currentUser.id}`);
+                const txData = await txRes.json();
+                if (txData.success && txData.transactions) {
+                    notifSources.txns = txData.transactions;
+                    notifSources.txnsLoaded = true;
+                }
+            } catch (e) { console.error('Could not fetch transactions for notifications:', e); }
+
+            syncNotifications();
+        }
+        // ================= END NOTIFICATIONS =================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const cur = getCurrencySymbol();
+            document.querySelectorAll('.currency-placeholder').forEach(input => {
+                input.placeholder = `Amount (${cur})`;
+            });
+
+            seedLocalEvents();
+            renderNotifications();
+            setInterval(renderNotifications, 60000);
+            fetchNotifSources();
+            setInterval(fetchNotifSources, 30000);
+
+            loadMyCopyTrades();
+        });
+
+        async function loadMyCopyTrades() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/copy-trade/mine/${currentUser.id}`);
+                const data = await res.json();
+                if (data.success && data.trades) {
+                    data.trades.forEach(t => markButtonAsFollowing(t));
+                }
+            } catch (err) {
+                console.error('Failed to load copy trades:', err);
+            }
+        }
+
+        function markButtonAsFollowing(copy) {
+            document.querySelectorAll('.btn-copy').forEach(btn => {
+                if (btn.getAttribute('data-trader') === copy.trader_name) {
+                    const amount = Number(copy.amount);
+                    const currentValue = Number(copy.current_value);
+                    const profit = currentValue - amount;
+                    const profitPercent = amount > 0 ? ((profit / amount) * 100).toFixed(2) : '0.00';
+                    const arrow = profit >= 0 ? '▲' : '▼';
+                    const color = profit >= 0 ? 'var(--primary-teal)' : 'var(--primary-red)';
+                    const cur = getCurrencySymbol();
+
+                    btn.innerHTML = `Following ${arrow} ${cur}${currentValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profit >= 0 ? '+' : ''}${profitPercent}%)`;
+                    btn.style.background = 'rgba(30, 187, 163, 0.1)';
+                    btn.style.color = color;
+                    btn.style.border = `1px solid ${color}`;
+                    btn.style.fontSize = '13px';
+                    btn.setAttribute('data-following', 'true');
+
+                    const inputEl = document.getElementById('amt' + (Array.from(document.querySelectorAll('.btn-copy')).indexOf(btn) + 1));
+                    if (inputEl) inputEl.style.display = 'none';
+                }
+            });
+        }
+
+        async function executeCopy(traderName, inputId, event) {
+            if (event) event.preventDefault();
+            const btn = event.currentTarget;
+            const isFollowing = btn.getAttribute('data-following') === 'true';
+            const cur = getCurrencySymbol();
+
+            if (isFollowing) {
+                const confirmed = await showCustomConfirm(
+                    'Stop Copying?',
+                    `Are you sure you want to stop copying <strong>${traderName}</strong>? Your current copy value will be returned to your balance.`,
+                    'danger'
+                );
+                if (!confirmed) return;
+
+                showLoader();
+                try {
+                    const res = await fetch(`${API_BASE_URL}/copy-trade/unfollow/${encodeURIComponent(traderName)}?user_id=${currentUser.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        btn.innerText = 'Copy Trader';
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.style.border = '';
+                        btn.style.fontSize = '';
+                        btn.setAttribute('data-following', 'false');
+
+                        const inputEl = document.getElementById(inputId);
+                        if (inputEl) { inputEl.style.display = ''; inputEl.value = ''; }
+
+                        const profitMsg = data.profit >= 0
+                            ? `Profit: +${cur}${data.profit.toFixed(2)}`
+                            : `Loss: -${cur}${Math.abs(data.profit).toFixed(2)}`;
+                        showToast('success', `Stopped copying ${traderName}. ${cur}${data.returned.toFixed(2)} returned to your balance. ${profitMsg}`);
+                        fetchNotifSources();
+                    } else {
+                        showToast('error', data.message || 'Failed to unfollow.');
+                    }
+                } catch (err) {
+                    showToast('error', 'Connection error. Please try again.');
+                } finally { hideLoader(); }
+                return;
+            }
+
+            const inputEl = document.getElementById(inputId);
+            const amount = Number(inputEl.value);
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                inputEl.style.borderColor = 'var(--primary-red)';
+                inputEl.style.backgroundColor = 'rgba(242, 54, 69, 0.1)';
+                setTimeout(() => {
+                    inputEl.style.borderColor = 'var(--border-color)';
+                    inputEl.style.backgroundColor = 'var(--input-bg)';
+                }, 1000);
+                showToast('error', 'Please enter a valid amount to copy this trader.');
+                inputEl.focus();
+                return;
+            }
+
+            const confirmed = await showCustomConfirm(
+                'Confirm Copy Trade',
+                `Copy <strong>${traderName}</strong> with <strong>${cur}${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>?<br><br>This amount will be deducted from your available balance and allocated to this copy trade.`,
+                'primary'
+            );
+            if (!confirmed) return;
+
+            showLoader();
+            try {
+                const res = await fetch(`${API_BASE_URL}/copy-trade/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        trader_name: traderName,
+                        trader_badge: btn.getAttribute('data-badge') || 'Expert',
+                        amount: amount
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const copy = data.copy;
+                    btn.innerHTML = `Following ▲ ${cur}${Number(copy.current_value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (+0.00%)`;
+                    btn.style.background = 'rgba(30, 187, 163, 0.1)';
+                    btn.style.color = 'var(--primary-teal)';
+                    btn.style.border = '1px solid var(--primary-teal)';
+                    btn.style.fontSize = '13px';
+                    btn.setAttribute('data-following', 'true');
+                    inputEl.style.display = 'none';
+                    inputEl.value = '';
+
+                    showToast('success', `You are now copying ${traderName} with ${cur}${amount.toFixed(2)}. New balance: ${cur}${data.new_balance.toFixed(2)}`);
+                    fetchNotifSources();
+                } else {
+                    showToast('error', data.message || 'Failed to execute copy trade.');
+                }
+            } catch (err) {
+                showToast('error', 'Connection error. Please try again.');
+            } finally { hideLoader(); }
+        }
+    </script>
+
+<script>
+document.querySelectorAll('.logo-text h1, .brand-splash-text h1').forEach(h => {
+    const text = h.textContent.trim();
+    h.setAttribute('aria-label', text);
+    h.innerHTML = [...text].map(c => '<span aria-hidden="true">' + c + '</span>').join('');
+});
+</script>
+
+</body>
+</html>

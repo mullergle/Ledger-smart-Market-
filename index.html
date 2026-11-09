@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ledger Smart Market | Professional Trading Platform</title>
+
+    <script>
+    (function () {
+      const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+      const WARN_BEFORE_MS = 2 * 60 * 1000;
+      const LOGIN_PAGE = 'login.html';
+      const LAST_SEEN_KEY = 'nexoraLastSeen';
+      const WRITE_THROTTLE_MS = 30_000;
+      const currentPage = location.pathname.split('/').pop() || 'index.html';
+      const isLoginPage = currentPage === LOGIN_PAGE;
+      const clearAuth = () => { ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'].forEach(k => localStorage.removeItem(k)); sessionStorage.removeItem('nexoraState'); };
+      const logout = () => { clearAuth(); if (!isLoginPage) location.replace(LOGIN_PAGE); };
+      const isExpired = (t) => t && (Date.now() - t) > IDLE_TIMEOUT_MS;
+      if (!isLoginPage && !localStorage.getItem('nexoraUser')) { /* allow browsing */ }
+      const lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
+      if (isExpired(lastSeen)) { logout(); return; }
+      let lastWrite = 0;
+      const touch = () => { const t = Date.now(); if (t - lastWrite < WRITE_THROTTLE_MS) return; lastWrite = t; localStorage.setItem(LAST_SEEN_KEY, String(t)); };
+      localStorage.setItem(LAST_SEEN_KEY, String(Date.now())); lastWrite = Date.now();
+      ['click','keydown','scroll','touchstart','pointerdown'].forEach(evt => window.addEventListener(evt, touch, { passive: true }));
+      document.addEventListener('visibilitychange', () => { if (document.hidden) return; const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0); if (isExpired(t)) logout(); });
+      window.addEventListener('pageshow', (e) => { if (e.persisted && !localStorage.getItem('nexoraUser')) location.replace(LOGIN_PAGE); });
+    })();
+    </script>
+
+    <link rel="preconnect" href="https://s3.tradingview.com" crossorigin>
+    <link rel="preconnect" href="https://s.tradingview.com" crossorigin>
+    <link rel="preconnect" href="https://www.tradingview.com" crossorigin>
+    <link rel="dns-prefetch" href="https://s3.tradingview.com">
+
+    <style>
+        :root {
+            --primary-bright: #f0b90b;
+            --primary-hover: #fcd535;
+            --primary-dark: #b98a08;
+            --primary-glow: rgba(240,185,11,0.35);
+            --accent-teal: #1ebba3;
+            --dark-bg: #0b0b0d;
+            --darker-bg: #050505;
+            --panel-bg: #0f0f12;
+            --panel-elevated: #17171b;
+            --text-white: #ffffff;
+            --text-green: #089981;
+            --text-red: #f23645;
+            --text-gray: #9b9ba3;
+            --text-dim: #6c6c75;
+            --border-color: #2a2a2e;
+            --border-subtle: #17171b;
+            --input-bg: #141418;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-panel: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px rgba(240,185,11,0.18);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); -webkit-tap-highlight-color: transparent; }
+        html { scroll-behavior: smooth; }
+        body { background-color: var(--darker-bg); color: var(--text-white); line-height: 1.6; overflow-x: hidden; transition: direction 0.3s ease; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        
+
+        body[dir="rtl"] { direction: rtl; text-align: right; }
+        body[dir="rtl"] .chat-btn { right: auto; left: 20px; }
+        body[dir="rtl"] .nav-arrow.left { left: auto; right: 0; transform: rotate(180deg); }
+        body[dir="rtl"] .nav-arrow.right { right: auto; left: 0; transform: rotate(180deg); }
+        body[dir="rtl"] .step-item { flex-direction: row-reverse; }
+        body[dir="rtl"] .testimonial-card { border-left: none; border-right: 4px solid var(--primary-bright); }
+        body[dir="rtl"] .password-toggle { right: auto; left: 15px; }
+        body[dir="rtl"] .nexus-select-wrapper::after { right: auto; left: 18px; }
+        body[dir="rtl"] .language-selector::after { right: auto; left: 10px; }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+        button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+        /* ============ LEDGER LOGO ============ */
+        .ltm-logo { width: 46px; height: 46px; flex-shrink: 0; display: block; filter: drop-shadow(0 4px 14px rgba(240,185,11,0.35)); }
+        .ltm-logo.splash { width: 92px; height: 92px; margin-bottom: 22px; filter: drop-shadow(0 0 28px rgba(240,185,11,0.5)); animation: brandSplashFadeIn 0.7s ease-out both; }
+
+        .logo-text h1 {
+            font-size: 17px; font-weight: 800; letter-spacing: 1.5px; line-height: 1;
+            background: linear-gradient(90deg, #f0b90b, #fcd535);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-text span { font-size: 8.5px; letter-spacing: 2.2px; color: #9a9aa3; margin-top: 4px; display: block; font-weight: 600; }
+
+        .brand-splash-text h1 {
+            font-size: 34px; font-weight: 800; letter-spacing: 5px; line-height: 1;
+            background: linear-gradient(90deg, #f0b90b, #fcd535);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0; padding-left: 5px;
+            filter: drop-shadow(0 0 20px rgba(240,185,11,0.5));
+        }
+
+        .logo-container { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+
+        /* ============ LOADER ============ */
+        .global-loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11,11,11,0.85);
+            z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .global-loader-overlay.active { opacity: 1; visibility: visible; }
+
+        .ios-spinner {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            animation: iosSpinDecay 1.2s cubic-bezier(0.45, 0.05, 0.15, 1) infinite;
+        }
+        
+        .ios-spinner .dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--primary-bright);
+            box-shadow: 0 0 10px rgba(240,185,11,0.4);
+        }
+
+        .ios-spinner .dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .ios-spinner .dot:nth-child(2) { bottom: 5px; right: 3px; }
+        .ios-spinner .dot:nth-child(3) { bottom: 5px; left: 3px; }
+
+        @keyframes iosSpinDecay {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(1080deg); }
+        }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: rgba(10,10,12,0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(240,185,11,0.18); position: sticky; top: 0; z-index: 1000; }
+
+        .hamburger { background: linear-gradient(135deg, var(--primary-bright), #fcd535); width: 44px; height: 44px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; border-radius: var(--radius-sm); transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 15px var(--primary-glow); }
+        .hamburger:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--primary-glow); }
+        .hamburger div { width: 24px; height: 2px; background-color: #0a0a0a; border-radius: 2px; }
+
+        .sidebar { position: fixed; top: 0; left: 50%; width: calc(100% - 40px); max-width: 380px; height: auto; background: linear-gradient(180deg, var(--panel-bg) 0%, var(--dark-bg) 100%); z-index: 2000; padding: 30px 24px 24px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); border: 1px solid var(--border-color); border-top: none; box-shadow: 0 30px 80px rgba(0,0,0,0.85), 0 0 40px var(--primary-glow); transform: translate(-50%, -120%); opacity: 0; visibility: hidden; transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s ease; overflow: hidden; }
+        .sidebar::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); background-size: 200% 100%; animation: sidebarTopBar 4s linear infinite; }
+        @keyframes sidebarTopBar { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .sidebar::after { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 260px; height: 180px; background: radial-gradient(ellipse at center, rgba(240,185,11,0.18) 0%, transparent 70%); pointer-events: none; }
+        .sidebar.active { transform: translate(-50%, 20vh); opacity: 1; visibility: visible; }
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 1999; display: block; opacity: 0; visibility: hidden; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .sidebar-overlay.active { opacity: 1; visibility: visible; }
+        .close-sidebar { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--text-gray); font-size: 22px; line-height: 1; border-radius: 50%; transition: color 0.2s, background 0.2s, transform 0.2s; z-index: 3; }
+        .close-sidebar:hover { color: var(--primary-bright); background: rgba(240,185,11,0.1); transform: rotate(90deg); }
+        .sidebar h3 { margin-bottom: 22px; color: var(--primary-bright); font-size: 17px; letter-spacing: 1.5px; font-weight: 800; position: relative; z-index: 2; }
+        .sidebar ul { display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 2; }
+        .sidebar ul li a { font-size: 15px; color: #ddd; display: flex; align-items: center; padding: 13px 14px; border-radius: var(--radius-sm); border-bottom: 1px solid var(--border-subtle); transition: color 0.2s, background 0.2s, padding-left 0.2s; font-weight: 500; }
+        .sidebar ul li a::after { content: '›'; margin-left: auto; color: var(--text-dim); font-size: 18px; transition: color 0.2s, transform 0.2s; }
+        .sidebar ul li a:hover { color: var(--primary-bright); background: rgba(240,185,11,0.08); padding-left: 20px; }
+        .sidebar ul li a:hover::after { color: var(--primary-bright); transform: translateX(3px); }
+        .sidebar ul li:last-child a { border-bottom: none; }
+
+        .auth-section { display: flex; padding: 15px 20px; gap: 15px; background: var(--dark-bg); border-bottom: 1px solid var(--border-subtle); }
+        .btn { flex: 1; padding: 13px; text-align: center; font-weight: 700; font-size: 14px; border-radius: var(--radius-sm); display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn-outline { border: 1px solid var(--primary-bright); color: var(--primary-bright); background: transparent; }
+        .btn-outline:hover { background: rgba(240,185,11,0.08); box-shadow: 0 0 20px var(--primary-glow); }
+        .btn-solid { background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; border: 1px solid var(--primary-bright); box-shadow: 0 4px 15px var(--primary-glow); }
+        .btn-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 22px var(--primary-glow); }
+        .icon-user { width: 16px; height: 16px; fill: currentColor; }
+
+        .tv-ticker-section { background: #08080a; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); margin-top: 15px; position: relative; overflow: hidden; min-height: 46px; display: flex; align-items: center; }
+        .tv-ticker-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 50% 0%, rgba(240,185,11,0.08), transparent 70%); pointer-events: none; z-index: 0; }
+        .tv-ticker-section .tradingview-widget-container { position: relative; z-index: 1; width: 100%; }
+        .tv-ticker-section .tradingview-widget-container__widget { min-height: 46px; }
+        .tv-ticker-skeleton { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 12px; gap: 28px; overflow: hidden; z-index: 2; pointer-events: none; transition: opacity 0.35s ease, visibility 0.35s ease; }
+        .tv-ticker-skeleton.hide { opacity: 0; visibility: hidden; }
+        .tv-skeleton-item { display: flex; flex-direction: column; gap: 5px; min-width: 110px; }
+        .tv-skeleton-bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #0f0f12 0%, #232328 50%, #0f0f12 100%); background-size: 200% 100%; animation: tvShimmer 1.4s linear infinite; }
+        .tv-skeleton-bar.w1 { width: 60%; }
+        .tv-skeleton-bar.w2 { width: 85%; height: 12px; }
+        .tv-skeleton-bar.w3 { width: 50%; }
+        @keyframes tvShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .hero { position: relative; padding: 70px 20px 180px; text-align: center; background-image: radial-gradient(ellipse at 50% 0%, rgba(240,185,11,0.18), transparent 60%), linear-gradient(rgba(11,11,11,0.78), rgba(11,11,11,0.96)), url('https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop'); background-size: cover; background-position: center; min-height: 520px; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
+        .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, var(--darker-bg), transparent); pointer-events: none; }
+        .hero-content { position: relative; width: 100%; max-width: 560px; display: flex; justify-content: center; align-items: center; min-height: 220px; z-index: 2; }
+        .nav-arrow { position: absolute; font-size: 40px; color: var(--primary-bright); font-weight: 300; cursor: pointer; user-select: none; z-index: 5; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(240,185,11,0.08); border: 1px solid rgba(240,185,11,0.3); transition: background 0.2s, transform 0.2s; }
+        .nav-arrow:hover { background: rgba(240,185,11,0.18); }
+        .nav-arrow.left { left: 0; }
+        .nav-arrow.right { right: 0; }
+        .hero-slider { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.6s ease-in-out; pointer-events: none; }
+        .hero-slide.active { opacity: 1; pointer-events: auto; }
+        .hero h2 { font-size: 40px; font-weight: 800; line-height: 1.15; text-transform: uppercase; color: #ffffff; padding: 0 40px; margin-bottom: 32px; letter-spacing: -0.5px; }
+        .hero h2 span.orange {
+            background: linear-gradient(90deg, #f0b90b, #fcd535);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            filter: drop-shadow(0 0 20px rgba(240,185,11,0.35));
+        }
+        .btn-start-trading { 
+            border: 1px solid var(--primary-bright); 
+            color: var(--primary-bright); 
+            padding: 14px 36px; 
+            font-size: 14px; 
+            font-weight: 700; 
+            letter-spacing: 1.5px; 
+            background: rgba(240,185,11,0.08); 
+            text-transform: uppercase; 
+            border-radius: var(--radius-sm); 
+            transition: all 0.3s; 
+            margin: 0 auto; 
+            box-shadow: 0 0 30px var(--primary-glow); 
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+            min-height: 50px;
+            position: relative;
+            z-index: 10;
+        }
+        .btn-start-trading:hover { background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; box-shadow: 0 8px 30px var(--primary-glow); transform: translateY(-2px); border-color: transparent; }
+        .toast-container { position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 10; display: flex; justify-content: center; }
+        .toast { background: linear-gradient(135deg, var(--primary-bright), #fcd535); padding: 15px 20px; border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 30px var(--primary-glow); text-align: left; width: 100%; max-width: 380px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s; }
+        .toast.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .toast p { font-size: 14px; color: #0a0a0a; margin: 0; line-height: 1.4; font-weight: 600;}
+
+        .section { padding: 80px 20px; border-bottom: 1px solid var(--border-subtle); position: relative; }
+        .section-dark { background: var(--dark-bg); }
+        .section-title { text-align: center; font-size: 28px; font-weight: 800; margin-bottom: 50px; text-transform: uppercase; letter-spacing: -0.5px; }
+        .section-title span {
+            background: linear-gradient(90deg, #f0b90b, #fcd535);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .carousel-container { position: relative; max-width: 800px; margin: 0 auto; overflow: hidden; border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); border: 1px solid var(--border-color); }
+        .carousel-track { display: flex; transition: transform 0.5s ease-in-out; width: 300%; }
+        .carousel-slide { width: 33.3333%; flex-shrink: 0; position: relative; height: 350px; display: flex; align-items: flex-end; padding: 40px; background-size: cover; background-position: center; }
+        .slide-1 { background-image: linear-gradient(to top, rgba(0,0,0,0.95), transparent 70%), url('https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=1000&auto=format&fit=crop'); }
+        .slide-2 { background-image: linear-gradient(to top, rgba(0,0,0,0.95), transparent 70%), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop'); }
+        .slide-3 { background-image: linear-gradient(to top, rgba(0,0,0,0.95), transparent 70%), url('https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?q=80&w=1000&auto=format&fit=crop'); }
+        .slide-content h3 { font-size: 24px; font-weight: 800; margin-bottom: 10px; color: white; }
+        .slide-content p { font-size: 14px; color: #ddd; max-width: 400px; }
+        .carousel-nav { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; }
+        .carousel-btn { background: rgba(0,0,0,0.6); border: 1px solid var(--primary-bright); color: var(--primary-bright); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.3s; backdrop-filter: blur(10px); }
+        .carousel-btn:hover { background: var(--primary-bright); color: #0a0a0a; }
+
+        .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .feature-card { background: linear-gradient(160deg, var(--panel-bg), var(--panel-elevated)); border: 1px solid var(--border-color); padding: 32px 22px; border-radius: var(--radius-md); text-align: center; transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s; position: relative; overflow: hidden; }
+        .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); opacity: 0; transition: opacity 0.3s; }
+        .feature-card:hover { transform: translateY(-6px); border-color: rgba(240,185,11,0.4); box-shadow: var(--shadow-glow); }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-icon { width: 50px; height: 50px; margin: 0 auto 20px; color: var(--primary-bright); }
+        .feature-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; }
+        .feature-card h4 { font-size: 16px; margin-bottom: 10px; }
+        .feature-card p { font-size: 13px; color: var(--text-gray); }
+
+        .insight-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 820px; margin: 0 auto; }
+        .insight-card { background: linear-gradient(160deg, var(--panel-bg), var(--panel-elevated)); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 28px 22px; display: flex; flex-direction: column; gap: 12px; transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s; }
+        .insight-card:hover { border-color: rgba(240,185,11,0.4); transform: translateY(-3px); box-shadow: var(--shadow-glow); }
+        .insight-icon-wrap { width: 48px; height: 48px; border-radius: var(--radius-md); background: rgba(240,185,11,0.1); border: 1px solid rgba(240,185,11,0.3); display: flex; justify-content: center; align-items: center; color: var(--primary-bright); }
+        .insight-icon-wrap svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+        .insight-card h4 { font-size: 16px; color: white; }
+        .insight-card p { font-size: 13px; color: var(--text-gray); line-height: 1.5; }
+        .insight-card .insight-tag { font-size: 11px; color: var(--primary-bright); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-top: auto; display: flex; align-items: center; gap: 6px; }
+        .insight-card .insight-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--primary-bright); display: inline-block; box-shadow: 0 0 8px var(--primary-glow); }
+        @media (min-width: 600px) { .insight-grid { grid-template-columns: repeat(4, 1fr); } }
+
+        .steps-container { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 30px; }
+        .step-item { display: flex; gap: 20px; }
+        .step-number { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(145deg, rgba(240,185,11,0.15), rgba(240,185,11,0.04)); border: 2px solid var(--primary-bright); color: var(--primary-bright); display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; flex-shrink: 0; box-shadow: 0 0 20px var(--primary-glow); }
+        .step-text h4 { font-size: 18px; margin-bottom: 5px; }
+        .step-text p { color: var(--text-gray); font-size: 14px; }
+
+        .testimonial-slider { position: relative; max-width: 600px; margin: 0 auto; overflow: hidden; }
+        .testimonial-track { display: flex; transition: transform 0.4s ease; width: 200%; }
+        .testimonial-slide { width: 50%; flex-shrink: 0; padding: 0 10px; }
+        .testimonial-card { background: linear-gradient(160deg, var(--panel-bg), var(--panel-elevated)); padding: 30px; border-radius: var(--radius-md); border-left: 4px solid var(--primary-bright); height: 100%; box-shadow: var(--shadow-panel); }
+        .testimonial-card p { font-size: 15px; font-style: italic; color: #ddd; margin-bottom: 20px; }
+        .testimonial-author { display: flex; align-items: center; gap: 15px; }
+        .author-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #fcd535, var(--primary-bright)); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #050505; }
+        .author-info h5 { font-size: 15px; color: white; }
+        .author-info span { font-size: 12px; color: var(--text-green); }
+        .testimonial-dots { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #444; cursor: pointer; transition: background 0.3s, transform 0.2s; }
+        .dot.active { background: var(--primary-bright); transform: scale(1.3); box-shadow: 0 0 10px var(--primary-glow); }
+
+        .faq-container { max-width: 700px; margin: 0 auto; }
+        .faq-item { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; }
+        .faq-item.active { border-color: rgba(240,185,11,0.35); }
+        .faq-question { width: 100%; text-align: left; padding: 20px; color: white; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .faq-answer { padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; color: var(--text-gray); font-size: 14px; }
+        .faq-item.active .faq-answer { max-height: 200px; padding-bottom: 20px; }
+        .faq-icon { transition: transform 0.3s; color: var(--primary-bright); font-size: 18px; }
+        .faq-item.active .faq-icon { transform: rotate(45deg); }
+
+        .cta-banner { background: radial-gradient(ellipse at 50% 0%, rgba(240,185,11,0.15), transparent 70%), linear-gradient(135deg, #0f0f12, #17171b); border: 1px solid var(--border-color); padding: 60px 20px; text-align: center; border-radius: var(--radius-lg); margin: 40px 20px; position: relative; overflow: hidden; }
+        .cta-banner::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); }
+        .cta-banner h3 { font-size: 26px; margin-bottom: 15px; }
+        .cta-banner p { font-size: 15px; color: var(--text-gray); margin-bottom: 30px; }
+        .cta-banner .btn { display: inline-flex; width: auto; padding: 15px 50px; }
+
+        .footer { background-color: var(--dark-bg); padding: 60px 20px 80px; border-top: 1px solid var(--border-subtle); }
+        .footer-grid { display: flex; flex-direction: column; gap: 30px; margin-bottom: 40px; }
+        .footer-col h4 { color: var(--primary-bright); font-size: 16px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .footer-col ul { display: flex; flex-direction: column; gap: 10px; }
+        .footer-col ul a { color: var(--text-gray); font-size: 13px; transition: color 0.2s; }
+        .footer-col ul a:hover { color: var(--primary-bright); }
+        .footer-bottom { text-align: center; padding-top: 30px; border-top: 1px solid var(--border-subtle); }
+        .footer-bottom p { font-size: 11px; color: #6c6c75; line-height: 1.8; }
+
+        .chat-btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary-bright), #fcd535); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 20px var(--primary-glow); z-index: 1000; transition: transform 0.2s, box-shadow 0.2s; }
+        .chat-btn:hover { transform: scale(1.06); box-shadow: 0 6px 30px var(--primary-glow); }
+        .chat-btn svg { width: 30px; height: 30px; fill: var(--darker-bg); }
+        .online-dot { position: absolute; bottom: 0; left: 0; width: 18px; height: 18px; background-color: #2ecc71; border-radius: 50%; border: 3px solid var(--darker-bg); box-shadow: 0 0 10px rgba(46, 204, 113, 0.6); }
+
+        .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--darker-bg); z-index: 4000; display: none; flex-direction: column; overflow-y: auto; }
+        .full-modal.active { display: flex; }
+        .register-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; background: var(--dark-bg); z-index: 10; }
+        .register-close-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--text-gray); font-size: 28px; line-height: 1; border-radius: 50%; transition: color 0.2s, background 0.2s, transform 0.2s; background: transparent; cursor: pointer; }
+        .register-close-btn:hover { color: var(--primary-bright); background: rgba(240,185,11,0.1); transform: rotate(90deg); }
+
+        .register-container { padding: 20px; max-width: 500px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 15px; }
+        .nexus-input { width: 100%; padding: 18px 16px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #fff; font-size: 14px; letter-spacing: 0.5px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .nexus-input::placeholder { color: #6c6c75; text-transform: uppercase; font-size: 13px; letter-spacing: 1px;}
+        .nexus-input:focus { border-color: var(--primary-bright); box-shadow: 0 0 0 3px rgba(240,185,11,0.15); }
+        .nexus-select-wrapper { position: relative; width: 100%; }
+        .nexus-select { width: 100%; padding: 18px 16px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: #fff; font-size: 16px; letter-spacing: 0.5px; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer; }
+        .nexus-select option { background: var(--dark-bg); }
+        .nexus-select-wrapper::after { content: '◇'; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--primary-bright); font-size: 18px; pointer-events: none; }
+
+        .nexus-submit-btn { background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; width: 100%; padding: 18px; font-size: 16px; font-weight: 700; border-radius: var(--radius-sm); margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.2s, box-shadow 0.2s; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 20px var(--primary-glow); }
+        .nexus-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px var(--primary-glow); }
+        .nexus-submit-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .register-login-row { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; flex-wrap: wrap; gap: 15px; }
+        .login-prompt { color: #aaa; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+        .login-prompt a { color: var(--primary-bright); font-weight: 700; cursor: pointer; }
+
+        .language-selector { background: #fff; border: 1px solid #ccc; border-radius: var(--radius-sm); padding: 8px 12px; display: flex; align-items: center; gap: 8px; color: #333; font-size: 14px; cursor: pointer; position: relative; transition: background 0.2s; }
+        .language-selector:hover { background: #f0f0f0; }
+        .language-selector svg { width: 20px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+        .language-selector select { background: transparent; border: none; color: #333; font-size: 14px; appearance: none; outline: none; cursor: pointer; padding-right: 15px; font-weight: 500; }
+        .language-selector::after { content: '⌄'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #333; pointer-events: none; font-size: 16px; font-weight: bold; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(8px); }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: linear-gradient(180deg, var(--panel-bg), var(--panel-elevated)); width: 100%; max-width: 420px; padding: 40px 30px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); position: relative; animation: modalPop 0.3s ease-out; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow: hidden; }
+        .modal-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); }
+        @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .close-modal { color: var(--text-gray); font-size: 24px; position: absolute; top: 20px; right: 20px; cursor: pointer; transition: color 0.2s; }
+        .close-modal:hover { color: var(--primary-bright); }
+        .modal-header { text-align: center; margin-bottom: 30px; }
+        .modal-header .modal-logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .modal-header .modal-logo h2 { color: var(--primary-bright); font-size: 20px; letter-spacing: 2px; }
+        .modal-header p { color: var(--text-gray); font-size: 14px; }
+        .form-group { margin-bottom: 20px; position: relative; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-gray); margin-bottom: 8px; font-weight: 500;}
+        .form-group input { width: 100%; padding: 14px 15px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: white; font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-group input:focus { border-color: var(--primary-bright); box-shadow: 0 0 0 3px rgba(240,185,11,0.15); }
+        .password-toggle { position: absolute; right: 15px; top: 38px; color: var(--text-gray); cursor: pointer; font-size: 12px; font-weight: 600; }
+        .modal-content .btn-submit { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 18px var(--primary-glow); }
+        .modal-content .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+        .modal-switch { text-align: center; font-size: 13px; color: var(--text-gray); }
+        .modal-switch a { color: var(--primary-bright); font-weight: 600; cursor: pointer; }
+
+        /* ============ REMEMBER ME CHECKBOX ============ */
+        .remember-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            user-select: none;
+            width: fit-content;
+        }
+        .remember-row input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-bg);
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .remember-row input[type="checkbox"]:checked {
+            background: var(--primary-bright);
+            border-color: var(--primary-bright);
+        }
+        .remember-row input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            width: 4px;
+            height: 8px;
+            border: solid #0a0a0a;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .remember-row span {
+            font-size: 13px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        .pro-alert-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(11,11,11,0.88); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; padding: 24px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s; }
+        .pro-alert-overlay.active { opacity: 1; visibility: visible; }
+        .pro-alert-card { background: linear-gradient(180deg, var(--panel-bg) 0%, var(--dark-bg) 100%); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 400px; padding: 40px 28px 28px; text-align: center; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(240,185,11,0.08); transform: scale(0.92) translateY(10px); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden; }
+        .pro-alert-overlay.active .pro-alert-card { transform: scale(1) translateY(0); }
+        .pro-alert-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); }
+        .pro-alert-icon { width: 76px; height: 76px; margin: 0 auto 24px; border-radius: 50%; background: rgba(240,185,11,0.12); border: 1.5px solid rgba(240,185,11,0.4); display: flex; justify-content: center; align-items: center; position: relative; animation: iconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both; }
+        .pro-alert-icon::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 1px solid rgba(240,185,11,0.25); animation: iconPulse 2s ease-out infinite; }
+        .pro-alert-icon svg { width: 38px; height: 38px; stroke: var(--primary-bright); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+        .pro-alert-icon svg path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: drawCheck 0.5s ease-out 0.4s forwards; }
+        @keyframes iconPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes iconPulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.35); opacity: 0; } }
+        @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+        .pro-alert-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 10px; letter-spacing: 0.3px; }
+        .pro-alert-message { font-size: 14px; color: var(--text-gray); line-height: 1.6; margin-bottom: 28px; }
+        .pro-alert-message strong { color: var(--primary-bright); font-weight: 600; word-break: break-word; }
+        .pro-alert-btn { width: 100%; background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; padding: 15px; font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: var(--radius-sm); transition: background 0.2s, transform 0.15s; display: inline-flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 4px 20px var(--primary-glow); }
+        .pro-alert-btn:hover { transform: translateY(-1px); }
+        .pro-alert-btn:active { transform: scale(0.98); }
+        .pro-alert-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+        .pro-alert-brand { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 20px; opacity: 0.55; }
+        .pro-alert-brand span { font-size: 10px; letter-spacing: 2px; color: #888; font-weight: 600; }
+        .pro-alert-card.error .pro-alert-icon { background: rgba(242, 54, 69, 0.12); border-color: rgba(242, 54, 69, 0.4); }
+        .pro-alert-card.error .pro-alert-icon svg { stroke: var(--text-red); }
+        .pro-alert-card.error::before { background: linear-gradient(90deg, transparent, var(--text-red), transparent); }
+        .pro-alert-card.error .icon-check { display: none !important; }
+        .pro-alert-card.error .icon-cross { display: block !important; }
+
+        @media (min-width: 768px) {
+            .features-grid { grid-template-columns: repeat(4, 1fr); }
+            .footer-grid { flex-direction: row; justify-content: space-between; }
+            .footer-col { flex: 1; }
+            .carousel-slide { height: 450px; }
+            .slide-content h3 { font-size: 32px; }
+        }
+        .hidden { display: none !important; }
+
+        .brand-splash { position: fixed; inset: 0; z-index: 99999; background: radial-gradient(ellipse at center, #15130a 0%, #050505 100%); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0px; opacity: 1; visibility: visible; transition: opacity 0.5s ease, visibility 0.5s ease; pointer-events: auto; }
+        .brand-splash.nexora-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+        .brand-splash-logo { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; animation: brandSplashFadeIn 0.7s ease-out both; }
+        .brand-splash-text { text-align: center; animation: brandSplashFadeIn 0.7s ease-out 0.15s both; }
+        .brand-splash-text span { display: block; font-size: 11px; letter-spacing: 4px; color: #9a9aa3; margin-top: 8px; padding-left: 4px; }
+        .brand-splash-bar { width: 80px; height: 3px; background: rgba(240,185,11,0.1); border-radius: 2px; overflow: hidden; margin-top: 30px; animation: brandSplashFadeIn 0.7s ease-out 0.3s both; }
+        .brand-splash-bar::after { content: ''; display: block; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); background-size: 200% 100%; border-radius: 2px; animation: brandSplashProgress 2s linear infinite; transform-origin: left; }
+        @keyframes brandSplashFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes brandSplashProgress { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .login-required-overlay { position: fixed; inset: 0; z-index: 99998; background: rgba(11,11,11,0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .login-required-overlay.active { opacity: 1; visibility: visible; }
+        .login-required-card { background: linear-gradient(180deg, var(--panel-bg) 0%, var(--dark-bg) 100%); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 400px; padding: 42px 30px 30px; text-align: center; box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(240,185,11,0.08), 0 0 60px rgba(240,185,11,0.1); position: relative; overflow: hidden; transform: scale(0.92) translateY(12px); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .login-required-overlay.active .login-required-card { transform: scale(1) translateY(0); }
+        .login-required-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--primary-bright), transparent); background-size: 200% 100%; animation: loginRequireBar 3s linear infinite; }
+        @keyframes loginRequireBar { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .login-required-card::after { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 260px; height: 200px; background: radial-gradient(ellipse at center, rgba(240,185,11,0.2) 0%, transparent 70%); pointer-events: none; }
+        .login-required-icon { width: 88px; height: 88px; margin: 0 auto 26px; border-radius: 50%; background: linear-gradient(145deg, rgba(240,185,11,0.15), rgba(240,185,11,0.05)); border: 1.5px solid rgba(240,185,11,0.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; animation: loginRequireIconPulse 2.6s ease-in-out infinite; }
+        @keyframes loginRequireIconPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(240,185,11,0.35); } 50% { box-shadow: 0 0 0 16px rgba(240,185,11,0); } }
+        .login-required-icon svg { width: 42px; height: 42px; fill: none; stroke: var(--primary-bright); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .login-required-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 10px; letter-spacing: 0.2px; position: relative; z-index: 1; }
+        .login-required-desc { font-size: 14.5px; color: #9b9ba3; line-height: 1.6; margin-bottom: 28px; position: relative; z-index: 1; }
+        .login-required-desc strong { color: var(--primary-bright); font-weight: 600; }
+        .login-required-actions { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
+        .login-required-btn-primary { width: 100%; background: linear-gradient(135deg, var(--primary-bright) 0%, #fcd535 100%); color: #0a0a0a; font-size: 15px; font-weight: 700; padding: 15px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; gap: 9px; transition: transform 0.15s, box-shadow 0.2s; box-shadow: 0 8px 22px var(--primary-glow); border: none; letter-spacing: 0.4px; text-transform: uppercase; }
+        .login-required-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 28px var(--primary-glow); }
+        .login-required-btn-primary:active { transform: translateY(0); }
+        .login-required-btn-primary svg { width: 16px; height: 16px; fill: currentColor; }
+        .login-required-btn-secondary { width: 100%; background: transparent; color: #8b8fa0; font-size: 13px; font-weight: 600; padding: 12px; border-radius: var(--radius-md); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s; letter-spacing: 0.3px; }
+        .login-required-btn-secondary:hover { background: rgba(240,185,11,0.06); color: var(--primary-bright); border-color: rgba(240,185,11,0.3); }
+        .login-required-footer { margin-top: 20px; font-size: 11px; letter-spacing: 1.8px; color: #6c6c75; font-weight: 600; text-transform: uppercase; position: relative; z-index: 1; }
+
+        @media (max-width: 400px) {
+            .login-required-card { padding: 36px 22px 24px; }
+            .login-required-icon { width: 76px; height: 76px; margin-bottom: 22px; }
+            .login-required-icon svg { width: 36px; height: 36px; }
+            .login-required-title { font-size: 20px; }
+            .login-required-desc { font-size: 13.5px; margin-bottom: 24px; }
+        }
+
+/* LEDGER aligned to SMART MARKET width */
+.logo-text, .brand-splash-text { display: inline-flex; flex-direction: column; align-items: stretch; }
+.logo-text h1, .brand-splash-text h1 { display: flex; justify-content: space-between; letter-spacing: 0 !important; font-weight: 800 !important; padding: 0 !important; line-height: 1; background: linear-gradient(90deg, #f0b90b, #fcd535) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: #f0b90b; filter: none !important; text-shadow: none; }
+.logo-text h1 { font-size: 21px !important; }
+.brand-splash-text h1 { font-size: 40px !important; }
+.logo-text h1 span, .brand-splash-text h1 span { display: block; font-size: inherit; font-weight: inherit; letter-spacing: 0; margin: 0; padding: 0; color: inherit; -webkit-text-fill-color: inherit; }
+.logo-text > span, .brand-splash-text > span { text-align: justify; text-align-last: justify; margin-right: 0 !important; padding-left: 0 !important; color: #9d9d9d; }
+.brand-splash-text > span { letter-spacing: 6px; }
+/* black gradient surfaces */
+body { background: linear-gradient(180deg, #131315 0%, #070708 45%, #030303 100%) fixed; }
+.section-dark { background: linear-gradient(180deg, #101012, #050505); }
+header { background: rgba(10,10,12,0.86); }
+.brand-splash { background: radial-gradient(ellipse at 50% 30%, #1c1a10 0%, #050505 70%); }
+
+    </style>
+
+    <!-- ===== NO ZOOM / NO SHIFT + GOOGLE BUTTON STYLES ===== -->
+    <style>
+    html, body { max-width: 100%; overflow-x: hidden; overscroll-behavior-x: none; overscroll-behavior-y: none; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 0; background-color: #050505; }
+    input, select, textarea,
+    .nexus-input, .nexus-select, .form-group input,
+    #verifyCode, #forgotCode { font-size: 16px !important; }
+    .nexus-input::placeholder { font-size: 13px; }
+
+    .google-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:12px; padding:13px 16px; background:#fff; color:#1f1f1f; font-size:14px; font-weight:600; letter-spacing:0.3px; border-radius:var(--radius-sm); border:1px solid #dadce0; transition:box-shadow .2s, transform .15s; }
+    .google-btn:active { transform: scale(.98); }
+    .or-divider { display:flex; align-items:center; gap:12px; margin:6px 0; }
+    .or-divider div { flex:1; height:1px; background:var(--border-color); }
+    .or-divider span { font-size:11px; color:var(--text-dim); letter-spacing:1.5px; font-weight:700; }
+    </style>
+</head>
+<body>
+
+    <!-- Gold gradient defs for the LEDGER logo -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <linearGradient id="ltmMetal" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#fcd535"/><stop offset=".55" stop-color="#f0b90b"/><stop offset="1" stop-color="#b98a08"/>
+            </linearGradient>
+            <linearGradient id="ltmBg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#26262b"/><stop offset="1" stop-color="#050505"/>
+            </linearGradient>
+            <linearGradient id="apexGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f0b90b"/><stop offset="100%" stop-color="#fcd535"/></linearGradient>
+        </defs>
+        <symbol id="ltmMark" viewBox="0 0 64 64">
+            <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#ltmBg)" stroke="url(#ltmMetal)" stroke-width="1.6"/>
+            <rect x="6.5" y="6.5" width="51" height="51" rx="12" fill="none" stroke="#f0b90b" stroke-opacity=".28" stroke-width="1"/>
+            <path d="M21 15 V47 H46" fill="none" stroke="url(#ltmMetal)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M28 40 L34 33 L39 37 L47 26" fill="none" stroke="#fcd535" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="47" cy="26" r="2.8" fill="#ffffff"/>
+        </symbol>
+    </svg>
+
+    <div class="brand-splash" id="brandSplash">
+        <svg class="ltm-logo splash" aria-hidden="true"><use href="#ltmMark"/></svg>
+        <div class="brand-splash-text">
+            <h1 aria-label="Ledger"><span>L</span><span>E</span><span>D</span><span>G</span><span>E</span><span>R</span></h1>
+            <span>SMART MARKET</span>
+        </div>
+        <div class="brand-splash-bar"></div>
+    </div>
+
+    <!-- iOS-STYLE 3-DOT SPINNER -->
+    <div class="global-loader-overlay" id="globalLoader">
+        <div class="ios-spinner">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar" id="sidebar">
+        <button class="close-sidebar" id="closeSidebar" aria-label="Close menu">&times;</button>
+        <h3 data-i18n="menu_title">LEDGER MENU</h3>
+        <ul>
+            <li><a href="#home" class="nav-link" data-i18n="nav_home">Home</a></li>
+            <li><a href="#features" class="nav-link" data-i18n="nav_features">Features</a></li>
+            <li><a href="#insights" class="nav-link" data-i18n="nav_insights">Market Insights</a></li>
+            <li><a href="#how-to" class="nav-link" data-i18n="nav_how">How It Works</a></li>
+            <li><a href="#faq" class="nav-link" data-i18n="nav_faq">FAQ</a></li>
+        </ul>
+    </div>
+
+    <header id="home">
+        <div class="logo-container">
+            <svg class="ltm-logo" role="img" aria-label="Ledger Smart Market logo"><use href="#ltmMark"/></svg>
+            <div class="logo-text">
+                <h1 aria-label="Ledger"><span>L</span><span>E</span><span>D</span><span>G</span><span>E</span><span>R</span></h1>
+                <span>SMART MARKET</span>
+            </div>
+        </div>
+        <button class="hamburger" id="hamburgerBtn" aria-label="Open menu">
+            <div></div><div></div><div></div>
+        </button>
+    </header>
+
+    <div class="auth-section">
+        <a href="login.html" class="btn btn-outline">
+            <svg class="icon-user" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span data-i18n="btn_signin">SIGN IN</span>
+        </a>
+        <a href="register.html" class="btn btn-solid">
+            <svg class="icon-user" viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span data-i18n="btn_register">REGISTER</span>
+        </a>
+    </div>
+
+    <div class="tv-ticker-section" id="tvTickerSection">
+        <div class="tv-ticker-skeleton" id="tvTickerSkeleton">
+            <div class="tv-skeleton-item"><div class="tv-skeleton-bar w1"></div><div class="tv-skeleton-bar w2"></div><div class="tv-skeleton-bar w3"></div></div>
+            <div class="tv-skeleton-item"><div class="tv-skeleton-bar w1"></div><div class="tv-skeleton-bar w2"></div><div class="tv-skeleton-bar w3"></div></div>
+            <div class="tv-skeleton-item"><div class="tv-skeleton-bar w1"></div><div class="tv-skeleton-bar w2"></div><div class="tv-skeleton-bar w3"></div></div>
+            <div class="tv-skeleton-item"><div class="tv-skeleton-bar w1"></div><div class="tv-skeleton-bar w2"></div><div class="tv-skeleton-bar w3"></div></div>
+            <div class="tv-skeleton-item"><div class="tv-skeleton-bar w1"></div><div class="tv-skeleton-bar w2"></div><div class="tv-skeleton-bar w3"></div></div>
+        </div>
+        <div class="tradingview-widget-container" id="tvTickerContainer">
+            <div class="tradingview-widget-container__widget"></div>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-slider">
+                <div class="hero-slide active">
+                    <h2><span class="orange">BITCOIN</span> <span data-i18n="hero_1">TRADING YOU CAN TRUST</span></h2>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
+                </div>
+                <div class="hero-slide">
+                    <h2><span class="orange">SMART TRADES</span> <span data-i18n="hero_2">BOLD MOVES</span></h2>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
+                </div>
+                <div class="hero-slide">
+                    <h2><span data-i18n="hero_3">EXCELLENCE IN EVERY TRADE</span></h2>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
+                </div>
+            </div>
+        </div>
+        <div class="toast-container">
+            <div class="toast" id="tradeToast"><p id="toastText">Someone from Sweden traded with $7,503.68</p></div>
+        </div>
+    </section>
+
+    <section class="section" style="padding-bottom: 40px;">
+        <h2 class="section-title" data-i18n="discover_title">Discover <span>Ledger</span></h2>
+        <div class="carousel-container">
+            <div class="carousel-track" id="featureTrack">
+                <div class="carousel-slide slide-1"><div class="slide-content"><h3 data-i18n="carousel_1_title">Advanced Charting Tools</h3><p data-i18n="carousel_1_desc">Access professional-grade technical analysis tools directly in your browser.</p></div></div>
+                <div class="carousel-slide slide-2"><div class="slide-content"><h3 data-i18n="carousel_2_title">Real-Time Analytics</h3><p data-i18n="carousel_2_desc">Make informed decisions with up-to-the-second market data and order book depth.</p></div></div>
+                <div class="carousel-slide slide-3"><div class="slide-content"><h3 data-i18n="carousel_3_title">Bank-Grade Security</h3><p data-i18n="carousel_3_desc">Your assets are protected with multi-signature wallets and cold storage.</p></div></div>
+            </div>
+            <div class="carousel-nav">
+                <button class="carousel-btn" id="prevFeature">&#10094;</button>
+                <button class="carousel-btn" id="nextFeature">&#10095;</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-dark" id="features">
+        <h2 class="section-title" data-i18n="why_title">Why Trade With <span>Ledger</span></h2>
+        <div class="features-grid">
+            <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div><h4 data-i18n="feat_1_title">Secure Platform</h4><p data-i18n="feat_1_desc">Bank-grade encryption and cold storage keeping your funds safe.</p></div>
+            <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div><h4 data-i18n="feat_2_title">Fast Execution</h4><p data-i18n="feat_2_desc">Lightning-fast order execution with minimal slippage on all trades.</p></div>
+            <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div><h4 data-i18n="feat_3_title">24/7 Support</h4><p data-i18n="feat_3_desc">Dedicated support team available around the clock to assist you.</p></div>
+            <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div><h4 data-i18n="feat_4_title">Low Fees</h4><p data-i18n="feat_4_desc">Industry leading low spreads and zero hidden fees on deposits.</p></div>
+        </div>
+    </section>
+
+    <section class="section" id="insights">
+        <h2 class="section-title" data-i18n="insights_title">Market <span>Insights</span></h2>
+        <div class="insight-grid">
+            <div class="insight-card"><div class="insight-icon-wrap"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="15 7 21 7 21 13"></polyline></svg></div><h4 data-i18n="insight_1_title">Bitcoin Surges</h4><p data-i18n="insight_1_desc">BTC breaks resistance at $82K as institutional demand increases.</p><div class="insight-tag" data-i18n="insight_1_tag">Bullish Signal</div></div>
+            <div class="insight-card"><div class="insight-icon-wrap"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v10M9.5 9.5h4a2 2 0 0 1 0 4h-3a2 2 0 0 0 0 4h4"></path></svg></div><h4 data-i18n="insight_2_title">EUR/USD Volatility</h4><p data-i18n="insight_2_desc">Euro gains momentum ahead of ECB policy meeting this week.</p><div class="insight-tag" data-i18n="insight_2_tag">Watch Closely</div></div>
+            <div class="insight-card"><div class="insight-icon-wrap"><svg viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg></div><h4 data-i18n="insight_3_title">US 100 Outlook</h4><p data-i18n="insight_3_desc">Tech stocks lead rally as earnings season kicks off strong.</p><div class="insight-tag" data-i18n="insight_3_tag">Positive Trend</div></div>
+            <div class="insight-card"><div class="insight-icon-wrap"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div><h4 data-i18n="insight_4_title">ETH Upgrade</h4><p data-i18n="insight_4_desc">Ethereum network upgrade promises lower gas fees and faster txs.</p><div class="insight-tag" data-i18n="insight_4_tag">Innovation</div></div>
+        </div>
+    </section>
+
+    <section class="section section-dark" id="how-to">
+        <h2 class="section-title" data-i18n="how_title">How To <span>Start</span></h2>
+        <div class="steps-container">
+            <div class="step-item"><div class="step-number">1</div><div class="step-text"><h4 data-i18n="step_1_title">Create an Account</h4><p data-i18n="step_1_desc">Sign up in minutes with your email address and verify your identity securely.</p></div></div>
+            <div class="step-item"><div class="step-number">2</div><div class="step-text"><h4 data-i18n="step_2_title">Fund Your Wallet</h4><p data-i18n="step_2_desc">Deposit funds using crypto, bank transfer, or supported credit cards instantly.</p></div></div>
+            <div class="step-item"><div class="step-number">3</div><div class="step-text"><h4 data-i18n="step_3_title">Start Trading</h4><p data-i18n="step_3_desc">Access global markets, analyze charts, and execute trades from your mobile device.</p></div></div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title" data-i18n="trusted_title">Trusted by <span>Traders</span></h2>
+        <div class="testimonial-slider">
+            <div class="testimonial-track" id="testimonialTrack">
+                <div class="testimonial-slide"><div class="testimonial-card"><p data-i18n="testimonial_1">"Ledger has completely changed how I view crypto trading. The interface is clean and execution is instant."</p><div class="testimonial-author"><div class="author-avatar">JD</div><div class="author-info"><h5>John Doe</h5><span data-i18n="verified_trader">Verified Trader</span></div></div></div></div>
+                <div class="testimonial-slide"><div class="testimonial-card"><p data-i18n="testimonial_2">"The customer support is unreal. I had an issue with a withdrawal and it was resolved in under 10 minutes."</p><div class="testimonial-author"><div class="author-avatar">AS</div><div class="author-info"><h5>Alice Smith</h5><span data-i18n="pro_trader">Pro Trader</span></div></div></div></div>
+            </div>
+            <div class="testimonial-dots"><div class="dot active" onclick="goToTestimonial(0)"></div><div class="dot" onclick="goToTestimonial(1)"></div></div>
+        </div>
+    </section>
+
+    <section class="section section-dark" id="faq">
+        <h2 class="section-title" data-i18n="faq_title">Frequently Asked <span>Questions</span></h2>
+        <div class="faq-container">
+            <div class="faq-item"><button class="faq-question"><span data-i18n="faq_1_q">Is Ledger regulated?</span> <span class="faq-icon">+</span></button><div class="faq-answer"><p data-i18n="faq_1_a">Yes, Ledger operates under strict regulatory compliance in multiple jurisdictions to ensure the safety of our users' funds and data.</p></div></div>
+            <div class="faq-item"><button class="faq-question"><span data-i18n="faq_2_q">What are the trading fees?</span> <span class="faq-icon">+</span></button><div class="faq-answer"><p data-i18n="faq_2_a">We offer highly competitive maker/taker fees starting from 0.1%. Volume discounts are available for high-frequency traders.</p></div></div>
+            <div class="faq-item"><button class="faq-question"><span data-i18n="faq_3_q">How long do deposits take?</span> <span class="faq-icon">+</span></button><div class="faq-answer"><p data-i18n="faq_3_a">Crypto deposits are usually instant after network confirmation. Fiat bank transfers may take 1-3 business days depending on your bank.</p></div></div>
+        </div>
+    </section>
+
+    <div class="cta-banner">
+        <h3 data-i18n="cta_title">Ready to start your journey?</h3>
+        <p data-i18n="cta_desc">Join thousands of traders worldwide on Ledger Smart Market.</p>
+        <button class="btn btn-solid" onclick="window.location.href='register.html'" data-i18n="btn_create_account">CREATE FREE ACCOUNT</button>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-col"><h4 data-i18n="foot_company">Company</h4><ul><li><a href="about.html" data-i18n="foot_about">About Us</a></li><li><a href="#" data-i18n="foot_careers">Careers</a></li><li><a href="#" data-i18n="foot_press">Press</a></li></ul></div>
+            <div class="footer-col"><h4 data-i18n="foot_support">Support</h4><ul><li><a href="#" data-i18n="foot_help">Help Center</a></li><li><a href="#" data-i18n="foot_api">API Docs</a></li><li><a href="#" data-i18n="foot_fees">Fees</a></li></ul></div>
+            <div class="footer-col"><h4 data-i18n="foot_legal">Legal</h4><ul><li><a href="#" data-i18n="foot_terms">Terms of Service</a></li><li><a href="#" data-i18n="foot_privacy">Privacy Policy</a></li><li><a href="#" data-i18n="foot_risk">Risk Warning</a></li></ul></div>
+        </div>
+        <div class="footer-bottom">
+            <p data-i18n="foot_disclaimer">Trading cryptocurrencies and derivatives involves significant risk and can result in the loss of your invested capital. Past performance is not indicative of future results. Please ensure you fully understand the risks involved and seek independent advice if necessary.</p>
+            <br>
+            <p data-i18n="foot_copy">&copy; 2024 Ledger Smart Market. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <button class="chat-btn" id="publicChatBtn" type="button" aria-label="Chat with support" style="display: none;">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <div class="online-dot"></div>
+    </button>
+
+    <div class="login-required-overlay" id="loginRequiredModal" role="dialog" aria-modal="true" aria-labelledby="loginRequiredTitle">
+        <div class="login-required-card">
+            <div class="login-required-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 class="login-required-title" id="loginRequiredTitle">Login Required</h3>
+            <p class="login-required-desc">To chat with our <strong>live support team</strong>, please sign in to your account first. It only takes a moment.</p>
+            <div class="login-required-actions">
+                <button class="login-required-btn-primary" id="loginRequiredSignInBtn" type="button">
+                    <span>Sign In Now</span>
+                    <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                </button>
+                <button class="login-required-btn-secondary" onclick="closeLoginRequiredModal()" type="button">Maybe Later</button>
+            </div>
+            <div class="login-required-footer">LEDGER · SECURE SUPPORT</div>
+        </div>
+    </div>
+
+    <div class="pro-alert-overlay" id="proAlertOverlay">
+        <div class="pro-alert-card" id="proAlertCard">
+            <div class="pro-alert-icon">
+                <svg viewBox="0 0 24 24">
+                    <path class="icon-check" d="M5 13l4 4L19 7"/>
+                    <path class="icon-cross" d="M6 6l12 12M18 6L6 18" style="display: none;"/>
+                </svg>
+            </div>
+            <h3 class="pro-alert-title" id="proAlertTitle">Email Verified</h3>
+            <p class="pro-alert-message" id="proAlertMessage">Your account has been successfully verified. You may now sign in to access your dashboard.</p>
+            <button class="pro-alert-btn" id="proAlertBtn">
+                <span>Continue to Login</span>
+                <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <div class="pro-alert-brand"><span>LEDGER · SECURE ACCOUNT</span></div>
+        </div>
+    </div>
+
+   <script>
+        const API_BASE_URL = 'https://apexline-market.onrender.com';
+
+        const loader = document.getElementById('globalLoader');
+        function showLoader() { loader.classList.add('active'); }
+        function hideLoader() { loader.classList.remove('active'); }
+
+        function showProAlert({ title, message, buttonText, onClose, variant } = {}) {
+            const overlay = document.getElementById('proAlertOverlay');
+            const card = document.getElementById('proAlertCard');
+            const titleEl = document.getElementById('proAlertTitle');
+            const msgEl = document.getElementById('proAlertMessage');
+            const btn = document.getElementById('proAlertBtn');
+            const btnSpan = btn.querySelector('span');
+            card.classList.remove('error');
+            if (variant === 'error') card.classList.add('error');
+            titleEl.innerText = title || 'Success';
+            msgEl.innerHTML = message || '';
+            btnSpan.innerText = buttonText || 'Continue';
+            const handleClose = () => { overlay.classList.remove('active'); if (typeof onClose === 'function') onClose(); };
+            btn.onclick = handleClose;
+            overlay.onclick = (e) => { if (e.target === overlay) handleClose(); };
+            overlay.classList.add('active');
+        }
+
+        (function initTradingViewTicker() {
+            const container = document.getElementById('tvTickerContainer');
+            const skeleton = document.getElementById('tvTickerSkeleton');
+            if (!container) return;
+            const widgetDiv = container.querySelector('.tradingview-widget-container__widget');
+            if (!widgetDiv) return;
+            const tvConfig = {
+                "symbols": [
+                    { "proName": "FOREXCOM:SPXUSD", "title": "S&P 500" },
+                    { "proName": "FOREXCOM:NSXUSD", "title": "US 100" },
+                    { "proName": "FX_IDC:EURUSD", "title": "EUR/USD" },
+                    { "proName": "BITSTAMP:BTCUSD", "title": "Bitcoin" },
+                    { "proName": "BITSTAMP:ETHUSD", "title": "Ethereum" },
+                    { "proName": "OANDA:XAUUSD", "title": "Gold" },
+                    { "proName": "FX:GBPUSD", "title": "GBP/USD" },
+                    { "proName": "FX:USDJPY", "title": "USD/JPY" }
+                ],
+                "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive",
+                "colorTheme": "dark", "locale": "en"
+            };
+            function injectTicker() {
+                if (widgetDiv.querySelector('iframe')) return;
+                const script = document.createElement('script');
+                script.type = 'text/javascript'; script.async = true;
+                script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+                script.innerHTML = JSON.stringify(tvConfig);
+                widgetDiv.appendChild(script);
+                const hideSkeleton = () => { if (skeleton) skeleton.classList.add('hide'); };
+                let attempts = 0;
+                const poll = setInterval(() => {
+                    attempts++;
+                    if (widgetDiv.querySelector('iframe')) { clearInterval(poll); hideSkeleton(); }
+                    else if (attempts > 60) { clearInterval(poll); hideSkeleton(); }
+                }, 100);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectTicker, { once: true });
+            else injectTicker();
+        })();
+
+        const translations = {
+            en: { menu_title: "LEDGER MENU", nav_home: "Home", nav_features: "Features", nav_insights: "Market Insights", nav_how: "How It Works", nav_faq: "FAQ", btn_signin: "SIGN IN", btn_register: "REGISTER", btn_start: "START TRADING", btn_create_account: "CREATE FREE ACCOUNT", hero_1: "TRADING YOU CAN TRUST", hero_2: "BOLD MOVES", hero_3: "EXCELLENCE IN EVERY TRADE", discover_title: "Discover <span>Ledger</span>", carousel_1_title: "Advanced Charting Tools", carousel_1_desc: "Access professional-grade technical analysis tools directly in your browser.", carousel_2_title: "Real-Time Analytics", carousel_2_desc: "Make informed decisions with up-to-the-second market data and order book depth.", carousel_3_title: "Bank-Grade Security", carousel_3_desc: "Your assets are protected with multi-signature wallets and cold storage.", why_title: "Why Trade With <span>Ledger</span>", feat_1_title: "Secure Platform", feat_1_desc: "Bank-grade encryption and cold storage keeping your funds safe.", feat_2_title: "Fast Execution", feat_2_desc: "Lightning-fast order execution with minimal slippage on all trades.", feat_3_title: "24/7 Support", feat_3_desc: "Dedicated support team available around the clock to assist you.", feat_4_title: "Low Fees", feat_4_desc: "Industry leading low spreads and zero hidden fees on deposits.", insights_title: "Market <span>Insights</span>", insight_1_title: "Bitcoin Surges", insight_1_desc: "BTC breaks resistance at $82K as institutional demand increases.", insight_1_tag: "Bullish Signal", insight_2_title: "EUR/USD Volatility", insight_2_desc: "Euro gains momentum ahead of ECB policy meeting this week.", insight_2_tag: "Watch Closely", insight_3_title: "US 100 Outlook", insight_3_desc: "Tech stocks lead rally as earnings season kicks off strong.", insight_3_tag: "Positive Trend", insight_4_title: "ETH Upgrade", insight_4_desc: "Ethereum network upgrade promises lower gas fees and faster txs.", insight_4_tag: "Innovation", how_title: "How To <span>Start</span>", step_1_title: "Create an Account", step_1_desc: "Sign up in minutes with your email address and verify your identity securely.", step_2_title: "Fund Your Wallet", step_2_desc: "Deposit funds using crypto, bank transfer, or supported credit cards instantly.", step_3_title: "Start Trading", step_3_desc: "Access global markets, analyze charts, and execute trades from your mobile device.", trusted_title: "Trusted by <span>Traders</span>", testimonial_1: '"Ledger has completely changed how I view crypto trading. The interface is clean and execution is instant."', testimonial_2: '"The customer support is unreal. I had an issue with a withdrawal and it was resolved in under 10 minutes."', verified_trader: "Verified Trader", pro_trader: "Pro Trader", faq_title: "Frequently Asked <span>Questions</span>", faq_1_q: "Is Ledger regulated?", faq_1_a: "Yes, Ledger operates under strict regulatory compliance in multiple jurisdictions to ensure the safety of our users' funds and data.", faq_2_q: "What are the trading fees?", faq_2_a: "We offer highly competitive maker/taker fees starting from 0.1%. Volume discounts are available for high-frequency traders.", faq_3_q: "How long do deposits take?", faq_3_a: "Crypto deposits are usually instant after network confirmation. Fiat bank transfers may take 1-3 business days depending on your bank.", cta_title: "Ready to start your journey?", cta_desc: "Join thousands of traders worldwide on Ledger Smart Market.", foot_company: "Company", foot_about: "About Us", foot_careers: "Careers", foot_press: "Press", foot_support: "Support", foot_help: "Help Center", foot_api: "API Docs", foot_fees: "Fees", foot_legal: "Legal", foot_terms: "Terms of Service", foot_privacy: "Privacy Policy", foot_risk: "Risk Warning", foot_disclaimer: "Trading cryptocurrencies and derivatives involves significant risk and can result in the loss of your invested capital. Past performance is not indicative of future results. Please ensure you fully understand the risks involved and seek independent advice if necessary.", foot_copy: "&copy; 2024 Ledger Smart Market. All rights reserved." }
+        };
+
+        const languageSelect = document.getElementById('languageSelect');
+        const currentLangFlag = document.getElementById('currentLangFlag');
+
+        function changeLanguage(lang) {
+            if (lang === 'ar') document.body.setAttribute('dir', 'rtl');
+            else document.body.removeAttribute('dir');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) el.innerHTML = translations[lang][key];
+                else if (translations['en'][key]) el.innerHTML = translations['en'][key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (translations[lang] && translations[lang][key]) el.placeholder = translations[lang][key];
+                else if (translations['en'][key]) el.placeholder = translations['en'][key];
+            });
+            if (languageSelect) {
+                const flags = {
+                    en: '<rect width="24" height="24" fill="#012169"/><path d="M0 0L24 24M24 0L0 24" stroke="#fff" stroke-width="4"/><path d="M0 0L24 24M24 0L0 24" stroke="#C8102E" stroke-width="2"/><path d="M12 0v24M0 12h24" stroke="#fff" stroke-width="6"/><path d="M12 0v24M0 12h24" stroke="#C8102E" stroke-width="3"/>',
+                    es: '<rect width="24" height="24" fill="#C60B1E"/><rect y="6" width="24" height="12" fill="#FFC400"/>',
+                    fr: '<rect width="24" height="24" fill="#002395"/><rect x="8" width="8" height="24" fill="#fff"/><rect x="16" width="8" height="24" fill="#ED2939"/>',
+                    de: '<rect width="24" height="24" fill="#000"/><rect y="8" width="24" height="8" fill="#D00"/><rect y="16" width="24" height="8" fill="#FFCE00"/>',
+                    pt: '<rect width="24" height="24" fill="#046A38"/><rect width="10" height="24" fill="#DA020E"/><circle cx="10" cy="12" r="4" fill="#FFDF00"/>',
+                    it: '<rect width="24" height="24" fill="#009246"/><rect x="8" width="8" height="24" fill="#fff"/><rect x="16" width="8" height="24" fill="#CE2B37"/>',
+                    ru: '<rect width="24" height="24" fill="#fff"/><rect y="8" width="24" height="8" fill="#0039A6"/><rect y="16" width="24" height="8" fill="#D52B1E"/>',
+                    zh: '<rect width="24" height="24" fill="#DE2910"/><polygon points="5,3 6.5,8 2,5 8,5 3.5,8" fill="#FFDE00"/>',
+                    ja: '<rect width="24" height="24" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#BC002D"/>',
+                    ar: '<rect width="24" height="24" fill="#006C35"/><path d="M6 10h12M6 14h12" stroke="#fff" stroke-width="1.5"/>'
+                };
+                currentLangFlag.innerHTML = flags[lang] || flags['en'];
+            }
+            localStorage.setItem('preferredLanguage', lang);
+        }
+        const savedLang = localStorage.getItem('preferredLanguage') || 'en';
+        if (languageSelect) {
+            languageSelect.value = savedLang;
+            changeLanguage(savedLang);
+            languageSelect.addEventListener('change', (e) => { changeLanguage(e.target.value); });
+        }
+
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const closeSidebar = document.getElementById('closeSidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+            document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+        }
+        hamburgerBtn.addEventListener('click', toggleSidebar);
+        closeSidebar.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+        navLinks.forEach(link => link.addEventListener('click', () => { toggleSidebar(); document.body.style.overflow = ''; }));
+
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const parent = question.parentElement;
+                document.querySelectorAll('.faq-item').forEach(item => { if (item !== parent) item.classList.remove('active'); });
+                parent.classList.toggle('active');
+            });
+        });
+
+        let currentHeroSlide = 0;
+        const heroSlides = document.querySelectorAll('.hero-slide');
+        function updateHeroSlider() { heroSlides.forEach((slide, index) => slide.classList.toggle('active', index === currentHeroSlide)); }
+        setInterval(() => { currentHeroSlide = (currentHeroSlide + 1) % heroSlides.length; updateHeroSlider(); }, 4500);
+
+        let currentFeatureSlide = 0;
+        const featureTrack = document.getElementById('featureTrack');
+        function updateFeatureCarousel() { featureTrack.style.transform = `translateX(-${currentFeatureSlide * 33.3333}%)`; }
+        document.getElementById('nextFeature').addEventListener('click', () => { currentFeatureSlide = (currentFeatureSlide + 1) % 3; updateFeatureCarousel(); });
+        document.getElementById('prevFeature').addEventListener('click', () => { currentFeatureSlide = (currentFeatureSlide - 1 + 3) % 3; updateFeatureCarousel(); });
+        setInterval(() => { currentFeatureSlide = (currentFeatureSlide + 1) % 3; updateFeatureCarousel(); }, 5000);
+
+        let currentTestimonial = 0;
+        const testimonialTrack = document.getElementById('testimonialTrack');
+        function goToTestimonial(index) {
+            currentTestimonial = index;
+            testimonialTrack.style.transform = `translateX(-${currentTestimonial * 50}%)`;
+            document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.dot')[currentTestimonial].classList.add('active');
+        }
+        setInterval(() => { currentTestimonial = (currentTestimonial + 1) % 2; goToTestimonial(currentTestimonial); }, 6000);
+
+        const toast = document.getElementById('tradeToast');
+        const toastText = document.getElementById('toastText');
+        const countries = ['Sweden', 'Germany', 'France', 'Netherlands', 'Switzerland', 'UK', 'Spain', 'Italy', 'Norway', 'Belgium'];
+        function showToast() {
+            const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+            const baseAmt = Math.floor(Math.random() * 98000) + 1200;
+            const cents = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            toastText.innerHTML = `Someone from ${randomCountry} traded with $${baseAmt.toLocaleString('en-US')}.${cents}`;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(showToast, Math.floor(Math.random() * 5000) + 3000); }, 3000);
+        }
+        setTimeout(showToast, 2000);
+
+        
+        (function () {
+            const splash = document.getElementById('brandSplash');
+            if (!splash) return;
+            
+            // ✅ CHECK IF WE SHOULD SKIP THE SPLASH
+            const urlParams = new URLSearchParams(window.location.search);
+            const skipSplash = urlParams.get('skipSplash');
+            const scrollPos = urlParams.get('scrollPos');
+
+            if (skipSplash === 'true') {
+                // Instantly remove splash without animation
+                splash.classList.add('nexora-hide');
+                setTimeout(() => {
+                    if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+                }, 10); // 10ms to allow the DOM to remove it
+                
+                // ✅ RESTORE SCROLL POSITION
+                if (scrollPos) {
+                    setTimeout(() => {
+                        window.scrollTo({
+                            top: parseInt(scrollPos, 10),
+                            behavior: 'instant' 
+                        });
+                    }, 150); // Wait 150ms for the page to lay out
+                }
+                
+                return; // Exit early so the timer doesn't run
+            }
+
+            // --- NORMAL SPLASH LOGIC ---
+            const MIN_DISPLAY_MS = 900; const FADE_MS = 500;
+            const startTime = Date.now();
+            function hideSplash() {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
+                setTimeout(() => { 
+                    splash.classList.add('nexora-hide'); 
+                    setTimeout(() => { 
+                        if (splash && splash.parentNode) splash.parentNode.removeChild(splash); 
+                    }, FADE_MS); 
+                }, remaining);
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideSplash, { once: true });
+            else hideSplash();
+            setTimeout(() => { 
+                if (splash && splash.parentNode) { 
+                    splash.classList.add('nexora-hide'); 
+                    setTimeout(() => { 
+                        if (splash.parentNode) splash.parentNode.removeChild(splash); 
+                    }, FADE_MS); 
+                } 
+            }, 4000);
+        })();
+
+
+
+        (function () {
+            const chatBtn = document.getElementById('publicChatBtn');
+            const loginRequiredModal = document.getElementById('loginRequiredModal');
+            const signInBtn = document.getElementById('loginRequiredSignInBtn');
+            if (!chatBtn || !loginRequiredModal) return;
+            function openLoginRequiredModal() { loginRequiredModal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+            window.closeLoginRequiredModal = function () { loginRequiredModal.classList.remove('active'); document.body.style.overflow = ''; };
+            chatBtn.addEventListener('click', (e) => { e.preventDefault(); openLoginRequiredModal(); });
+            signInBtn.addEventListener('click', () => { window.location.href = 'login.html'; });
+            loginRequiredModal.addEventListener('click', (e) => { if (e.target === loginRequiredModal) closeLoginRequiredModal(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && loginRequiredModal.classList.contains('active')) closeLoginRequiredModal(); });
+        })();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref');
+            if (refCode) {
+                localStorage.setItem('nexoraReferral', refCode);
+                window.location.href = 'register.html?ref=' + encodeURIComponent(refCode);
+            }
+        });
+    </script>
+    <noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+<script>
+document.querySelectorAll('.logo-text h1, .brand-splash-text h1').forEach(h => {
+    const text = h.textContent.trim();
+    h.setAttribute('aria-label', text);
+    h.innerHTML = [...text].map(c => '<span aria-hidden="true">' + c + '</span>').join('');
+});
+</script>
+
+<!-- ===== LEDGER WOW ADD-ON ===== -->
+<style>
+/* progress bar + header */
+#apxProgress{position:fixed;top:0;left:0;height:3px;width:100%;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,#b98a08,#f0b90b,#fcd535);z-index:10001;box-shadow:0 0 12px rgba(240,185,11,0.6)}
+header{transition:background .3s,box-shadow .3s}
+header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0,0,.5),0 1px 0 rgba(240,185,11,0.25)}
+
+/* hero decoration */
+.apx-deco{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.apx-deco::after{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--gx,50%) var(--gy,35%),rgba(240,185,11,0.18),transparent 60%)}
+.apx-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:apxFloat 12s ease-in-out infinite}
+.apx-orb.o1{width:300px;height:300px;background:#f0b90b;top:-90px;left:-70px;opacity:.18}
+.apx-orb.o2{width:260px;height:260px;background:#fcd535;bottom:40px;right:-80px;opacity:.12;animation-delay:-4s}
+.apx-orb.o3{width:220px;height:220px;background:#b98a08;top:35%;left:55%;opacity:.16;animation-delay:-8s}
+.apx-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(240,185,11,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(240,185,11,0.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 75%)}
+.apx-line{position:absolute;left:0;right:0;bottom:70px;width:100%;height:160px;opacity:.55}
+.apx-line path{fill:none;stroke:url(#apxLg);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1000;stroke-dashoffset:1000;filter:drop-shadow(0 0 8px rgba(240,185,11,0.5));animation:apxDraw 7s ease-in-out infinite}
+#apxCanvas{position:absolute;inset:0}
+@keyframes apxFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-26px)}}
+@keyframes apxDraw{0%{stroke-dashoffset:1000;opacity:1}60%{stroke-dashoffset:0;opacity:1}90%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+
+/* headline shimmer + button shine */
+.hero h2 span.orange{background-image:linear-gradient(90deg,#f0b90b,#fcd535,#fff,#f0b90b);background-size:200% auto;animation:apxShimmer 5s linear infinite}
+@keyframes apxShimmer{to{background-position:200% center}}
+.btn-solid,.btn-start-trading,.nexus-submit-btn,.btn-submit{position:relative;overflow:hidden}
+.btn-solid::after,.btn-start-trading::after,.nexus-submit-btn::after,.btn-submit::after{content:'';position:absolute;top:0;left:-120%;width:55%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:apxShine 4s ease-in-out infinite;pointer-events:none}
+@keyframes apxShine{0%,60%{left:-120%}100%{left:170%}}
+
+/* stats band */
+.apx-stats{position:relative;z-index:5;width:calc(100% - 32px);max-width:960px;margin:-70px auto 10px;padding:26px 14px 20px;background:linear-gradient(160deg,rgba(27,25,18,.95),rgba(21,19,12,.95));border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel),0 0 60px rgba(240,185,11,0.15);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.apx-stats::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#f0b90b,#fcd535,transparent)}
+.apx-grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:20px 10px}
+.apx-stat{text-align:center}
+.apx-n{font-size:30px;font-weight:800;line-height:1.1;background:linear-gradient(90deg,#fcd535,#f0b90b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-variant-numeric:tabular-nums}
+.apx-l{font-size:11px;color:var(--text-gray);letter-spacing:1.2px;text-transform:uppercase;margin-top:5px;font-weight:600}
+.apx-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border-subtle)}
+.apx-pill{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#e4e4e8;background:rgba(240,185,11,0.07);border:1px solid rgba(240,185,11,0.25);padding:6px 12px;border-radius:20px}
+.apx-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#f0b90b;box-shadow:0 0 8px #f0b90b}
+@media(min-width:768px){.apx-grid4{grid-template-columns:repeat(4,1fr)}.apx-n{font-size:36px}}
+
+/* cards: spotlight + glow */
+.feature-card,.insight-card{position:relative;overflow:hidden}
+.feature-card::after,.insight-card::after{content:'';position:absolute;inset:0;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(240,185,11,0.14),transparent 65%);opacity:0;transition:opacity .3s;pointer-events:none}
+.feature-card:hover::after,.insight-card:hover::after{opacity:1}
+.feature-icon{filter:drop-shadow(0 0 10px rgba(240,185,11,0.45))}
+
+/* steps, dividers, CTA */
+.step-number{position:relative}
+.step-number::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(240,185,11,0.4);animation:apxPing 2.4s ease-out infinite}
+@keyframes apxPing{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.35);opacity:0}}
+.section{border-bottom-color:transparent}
+.section::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(240,185,11,0.35),transparent)}
+.cta-banner{animation:apxGlow 4s ease-in-out infinite}
+@keyframes apxGlow{0%,100%{box-shadow:0 0 30px rgba(240,185,11,0.1)}50%{box-shadow:0 0 70px rgba(240,185,11,0.28)}}
+
+/* scroll reveal */
+.apx-rv{opacity:0;transform:translateY(26px) scale(.98);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
+.apx-rv.apx-in{opacity:1;transform:none}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.apx-rv{opacity:1;transform:none}}
+</style>
+
+<script>
+(function () {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+  /* ---- EDIT THESE NUMBERS TO YOUR REAL ONES ---- */
+  const STATS = [
+    { p: '',  n: 250,  d: 0, s: 'K+', l: 'Active Traders' },
+    { p: '$', n: 1.2,  d: 1, s: 'B+', l: 'Trading Volume' },
+    { p: '',  n: 120,  d: 0, s: '+',  l: 'Countries' },
+    { p: '',  n: 99.9, d: 1, s: '%',  l: 'Uptime' }
+  ];
+  const PILLS = ['Bank-grade encryption', 'Cold-storage custody', '24/7 live support', 'Fast execution'];
+
+  /* ---- progress bar + header glow ---- */
+  const bar = document.createElement('div'); bar.id = 'apxProgress'; document.body.appendChild(bar);
+  const header = $('header');
+  function onScroll() {
+    const h = document.documentElement;
+    bar.style.transform = 'scaleX(' + Math.min(1, h.scrollTop / ((h.scrollHeight - h.clientHeight) || 1)) + ')';
+    if (header) header.classList.toggle('apx-scrolled', h.scrollTop > 10);
+  }
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  /* ---- hero: orbs, grid, chart line, particles ---- */
+  const hero = $('.hero');
+  if (hero) {
+    const deco = document.createElement('div'); deco.className = 'apx-deco';
+    deco.innerHTML = '<i class="apx-orb o1"></i><i class="apx-orb o2"></i><i class="apx-orb o3"></i><div class="apx-grid"></div>' +
+      '<svg class="apx-line" viewBox="0 0 800 160" preserveAspectRatio="none"><defs><linearGradient id="apxLg" x1="0" x2="1"><stop offset="0" stop-color="#f0b90b" stop-opacity="0"/><stop offset=".5" stop-color="#f0b90b"/><stop offset="1" stop-color="#fcd535"/></linearGradient></defs>' +
+      '<path pathLength="1000" d="M0 130 L80 110 L150 120 L230 70 L300 90 L380 40 L460 70 L540 30 L620 55 L700 15 L800 35"/></svg><canvas id="apxCanvas"></canvas>';
+    hero.insertBefore(deco, hero.firstChild);
+
+    hero.addEventListener('mousemove', e => {
+      const r = hero.getBoundingClientRect();
+      deco.style.setProperty('--gx', (e.clientX - r.left) + 'px');
+      deco.style.setProperty('--gy', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+
+    if (!reduce) {
+      const cv = $('#apxCanvas'), ctx = cv.getContext('2d');
+      let W, H, pts = [], raf = null, vis = true;
+      function size() {
+        const r = hero.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+        W = r.width; H = r.height;
+        cv.width = W * d; cv.height = H * d; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        ctx.setTransform(d, 0, 0, d, 0, 0);
+        pts = Array.from({ length: W < 600 ? 36 : 70 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: Math.random() * 1.6 + .6 }));
+      }
+      function tick() {
+        if (!vis || document.hidden) { raf = null; return; }
+        ctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i];
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > W) p.vx *= -1;
+          if (p.y < 0 || p.y > H) p.vy *= -1;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fillStyle = 'rgba(240,185,11,0.6)'; ctx.fill();
+          for (let j = i + 1; j < pts.length; j++) {
+            const q = pts[j], dx = p.x - q.x, dy = p.y - q.y, dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              ctx.strokeStyle = 'rgba(240,185,11,' + ((1 - dist / 120) * .3) + ')';
+              ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+            }
+          }
+        }
+        raf = requestAnimationFrame(tick);
+      }
+      size(); raf = requestAnimationFrame(tick);
+      let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(size, 200); });
+      new IntersectionObserver(es => { vis = es[0].isIntersecting; if (vis && !raf) raf = requestAnimationFrame(tick); }).observe(hero);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && vis && !raf) raf = requestAnimationFrame(tick); });
+    }
+  }
+
+  /* ---- stats band (inserted right after the hero) ---- */
+  const firstSection = $('.section');
+  if (firstSection) {
+    const band = document.createElement('div'); band.className = 'apx-stats';
+    band.innerHTML = '<div class="apx-grid4">' + STATS.map(s =>
+      '<div class="apx-stat"><div class="apx-n" data-n="' + s.n + '" data-d="' + s.d + '" data-p="' + s.p + '" data-s="' + s.s + '">' + s.p + (0).toFixed(s.d) + s.s + '</div><div class="apx-l">' + s.l + '</div></div>').join('') +
+      '</div><div class="apx-pills">' + PILLS.map(t => '<span class="apx-pill">' + t + '</span>').join('') + '</div>';
+    firstSection.parentNode.insertBefore(band, firstSection);
+
+    function count(el) {
+      const n = +el.dataset.n, d = +el.dataset.d || 0, p = el.dataset.p || '', s = el.dataset.s || '';
+      if (reduce) { el.textContent = p + n.toFixed(d) + s; return; }
+      const t0 = performance.now();
+      (function f(t) {
+        const k = Math.min(1, (t - t0) / 1600), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = p + (n * e).toFixed(d) + s;
+        if (k < 1) requestAnimationFrame(f);
+      })(t0);
+    }
+    const cio = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { band.querySelectorAll('.apx-n').forEach(count); cio.disconnect(); }
+    }), { threshold: .3 });
+    cio.observe(band);
+  }
+
+  /* ---- card spotlight follows the cursor ---- */
+  document.addEventListener('mousemove', e => {
+    const c = e.target.closest && e.target.closest('.feature-card,.insight-card');
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
+
+  /* ---- scroll reveal ---- */
+  if (!reduce && 'IntersectionObserver' in window) {
+    const sel = '.section-title,.carousel-container,.feature-card,.insight-card,.step-item,.testimonial-slider,.faq-item,.cta-banner,.apx-stats,.footer-col';
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target; el.classList.add('apx-in'); io.unobserve(el);
+      setTimeout(() => { el.classList.remove('apx-rv', 'apx-in'); el.style.transitionDelay = ''; }, 1500);
+    }), { threshold: .12, rootMargin: '0px 0px -40px 0px' });
+    $$(sel).forEach(el => {
+      const sib = [...el.parentNode.children].filter(c => c.matches(sel));
+      el.style.transitionDelay = Math.min(sib.indexOf(el), 5) * 90 + 'ms';
+      el.classList.add('apx-rv'); io.observe(el);
+    });
+  }
+})();
+</script>
+<!-- ===== END LEDGER WOW ADD-ON ===== -->
+
+<!-- ===== LEDGER WOW v2 ===== -->
+<style>
+/* ---------- slides: cinematic entrances ---------- */
+@keyframes apxRise{from{opacity:0;transform:translateY(38px);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.hero-slide.active h2{animation:apxRise 1s cubic-bezier(.16,1,.3,1) backwards}
+.hero-slide.active .btn-start-trading{animation:apxRise 1s .25s cubic-bezier(.16,1,.3,1) backwards}
+.carousel-slide{overflow:hidden}
+.carousel-slide::before{content:'';position:absolute;inset:0;background:inherit;transform:scale(1);transition:transform 1s}
+.carousel-slide.apx-on::before{transform:scale(1.16);transition:transform 9s linear}
+.carousel-slide>*{position:relative;z-index:1}
+.carousel-slide.apx-on .slide-content h3{animation:apxRise .9s .1s cubic-bezier(.16,1,.3,1) backwards}
+.carousel-slide.apx-on .slide-content p{animation:apxRise .9s .3s cubic-bezier(.16,1,.3,1) backwards}
+.carousel-container{box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 70px rgba(240,185,11,0.2)}
+/* progress dots */
+.apx-dots{display:flex;gap:8px;z-index:6}
+.apx-dots button{position:relative;overflow:hidden;width:8px;height:8px;border-radius:8px;background:rgba(240,185,11,.28);transition:width .4s,background .3s}
+.apx-dots button.on{width:46px}
+.apx-dots button.on::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#fcd535,#f0b90b);transform-origin:left;animation:apxFill var(--d,4.5s) linear forwards}
+@keyframes apxFill{from{transform:scaleX(0)}}
+.apx-hd{position:absolute;bottom:-48px;left:50%;transform:translateX(-50%)}
+.apx-cd{position:absolute;left:40px;bottom:30px}
+
+/* ---------- live Bitcoin ---------- */
+.apx-live{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:30px;font-size:12px;font-weight:700;color:#f0b90b;background:rgba(240,185,11,0.08);border:1px solid rgba(240,185,11,0.3)}
+.apx-live::before{content:'';width:8px;height:8px;border-radius:50%;background:#f0b90b;box-shadow:0 0 10px #f0b90b;animation:apxBlink 1.6s infinite}
+@keyframes apxBlink{50%{opacity:.3}}
+.apx-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:1000px;margin:0 auto}
+@media(min-width:768px){.apx-tiles{grid-template-columns:repeat(4,1fr)}}
+.apx-tile{position:relative;overflow:hidden;padding:14px 14px 10px;border-radius:14px;border:1px solid var(--border-color);background:linear-gradient(160deg,var(--panel-bg),var(--panel-elevated));transition:border-color .3s,box-shadow .3s}
+.apx-tile:hover{border-color:rgba(240,185,11,0.4);box-shadow:var(--shadow-glow)}
+.apx-tile .tl{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--text-gray)}
+.apx-tile .tl b{color:#f0b90b;font-size:15px}
+.apx-tile .tp{font-size:20px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;transition:color .2s}
+.apx-tile .tp.up{animation:apxUp 1s}.apx-tile .tp.dn{animation:apxDn 1s}
+@keyframes apxUp{0%{color:#2ee6c5;text-shadow:0 0 14px #089981}100%{color:#fff}}
+@keyframes apxDn{0%{color:#ff6b7d;text-shadow:0 0 14px #f23645}100%{color:#fff}}
+.apx-tile .tc{display:inline-block;margin-top:2px;font-size:12px;font-weight:700}
+.apx-tile .tc.g{color:#089981}.apx-tile .tc.r{color:#f23645}
+.apx-tile canvas{display:block;width:100%;height:50px;margin-top:6px}
+.apx-frame{position:relative;max-width:1000px;height:380px;margin:16px auto 0;border-radius:18px;overflow:hidden;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 70px rgba(240,185,11,0.15);background:linear-gradient(110deg,#0b0b0d 30%,#141418 50%,#0b0b0d 70%) 0 0/200% 100%;animation:tvShimmer 1.6s linear infinite}
+.apx-frame::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#f0b90b,#fcd535,transparent);z-index:3}
+@media(min-width:768px){.apx-frame{height:480px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<script>
+(function () {
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+  /* ---------- progress dots for both slide shows ---------- */
+  function dots(parent, cls, n, dur, go) {
+    const w = document.createElement('div'); w.className = 'apx-dots ' + cls; w.style.setProperty('--d', dur);
+    for (let i = 0; i < n; i++) { const b = document.createElement('button'); b.setAttribute('aria-label', 'Slide ' + (i + 1)); b.onclick = () => go(i); w.appendChild(b); }
+    parent.appendChild(w);
+    return i => [...w.children].forEach((b, k) => {
+      const on = k === i;
+      if (on && b.classList.contains('on')) return;
+      b.classList.remove('on');
+      if (on) { void b.offsetWidth; b.classList.add('on'); }
+    });
+  }
+
+  const hs = $$('.hero-slide'), hc = $('.hero-content');
+  if (hs.length && hc) {
+    const setH = dots(hc, 'apx-hd', hs.length, '4.5s', i => { try { currentHeroSlide = i; updateHeroSlider(); } catch (e) {} });
+    const sync = () => setH(Math.max(0, hs.findIndex(s => s.classList.contains('active'))));
+    hs.forEach(s => new MutationObserver(sync).observe(s, { attributes: true, attributeFilter: ['class'] }));
+    sync();
+  }
+
+  const tr = $('#featureTrack'), cs = $$('.carousel-slide'), cc = $('.carousel-container');
+  if (tr && cs.length && cc) {
+    const setC = dots(cc, 'apx-cd', cs.length, '5s', i => { try { currentFeatureSlide = i; updateFeatureCarousel(); } catch (e) {} });
+    const sync = () => {
+      const m = /-?([\d.]+)%/.exec(tr.style.transform || ''), i = m ? Math.round(parseFloat(m[1]) / 33.3333) : 0;
+      cs.forEach((s, k) => s.classList.toggle('apx-on', k === i)); setC(i);
+    };
+    new MutationObserver(sync).observe(tr, { attributes: true, attributeFilter: ['style'] });
+    sync();
+  }
+
+  /* ---------- live Bitcoin section ---------- */
+  const feat = document.getElementById('features');
+  if (!feat) return;
+  const SY = [['BTC', 'btcusdt', 'bitcoin', 'Bitcoin'], ['ETH', 'ethusdt', 'ethereum', 'Ethereum'], ['SOL', 'solusdt', 'solana', 'Solana'], ['BNB', 'bnbusdt', 'binancecoin', 'BNB']];
+  const sec = document.createElement('section'); sec.className = 'section'; sec.id = 'live';
+  sec.innerHTML = '<h2 class="section-title">Live <span>Bitcoin</span></h2>' +
+    '<div style="text-align:center;margin:-34px 0 28px"><span class="apx-live">Live market data</span></div>' +
+    '<div class="apx-tiles">' + SY.map(s => '<div class="apx-tile" id="apx-' + s[0] + '"><div class="tl"><b>' + s[0] + '</b><span>' + s[3] + '</span></div><div class="tp">—</div><div class="tc">—</div><canvas width="240" height="60"></canvas></div>').join('') + '</div>' +
+    '<div class="apx-frame" id="apxFrame"><div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div></div>';
+  feat.parentNode.insertBefore(sec, feat);
+
+  /* big TradingView chart, loaded when you scroll near it */
+  const fr = $('#apxFrame');
+  new IntersectionObserver((es, o) => {
+    if (!es[0].isIntersecting) return;
+    o.disconnect();
+    const s = document.createElement('script'); s.async = true;
+    s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+    s.innerHTML = JSON.stringify({ autosize: true, symbol: 'BITSTAMP:BTCUSD', interval: '15', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en', backgroundColor: '#050505', gridColor: 'rgba(37,37,37,.45)', allow_symbol_change: false, save_image: false, calendar: false, support_host: 'https://www.tradingview.com' });
+    fr.querySelector('.tradingview-widget-container__widget').appendChild(s);
+  }, { rootMargin: '300px' }).observe(fr);
+
+  /* price tiles with sparklines */
+  const hist = {};
+  function spark(cv, h, up) {
+    if (h.length < 2) return;
+    const x = cv.getContext('2d'), W = cv.width, H = cv.height, mn = Math.min(...h), mx = Math.max(...h), sy = v => H - 6 - (v - mn) / ((mx - mn) || 1) * (H - 14), sx = i => i / (h.length - 1) * W;
+    const col = up ? '8,153,129' : '242,54,69';
+    x.clearRect(0, 0, W, H); x.beginPath(); h.forEach((v, i) => x[i ? 'lineTo' : 'moveTo'](sx(i), sy(v)));
+    x.strokeStyle = 'rgb(' + col + ')'; x.lineWidth = 2.5; x.lineJoin = 'round'; x.stroke();
+    x.lineTo(W, H); x.lineTo(0, H); const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, 'rgba(' + col + ',.35)'); g.addColorStop(1, 'rgba(' + col + ',0)'); x.fillStyle = g; x.fill();
+  }
+  function upd(s, p, ch) {
+    const e = $('#apx-' + s); if (!e || !isFinite(p)) return;
+    const h = hist[s] = hist[s] || [], prev = h[h.length - 1];
+    h.push(p); if (h.length > 60) h.shift();
+    const tp = e.querySelector('.tp');
+    tp.textContent = '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: p < 10 ? 4 : 2 });
+    if (prev != null && prev !== p) { tp.classList.remove('up', 'dn'); void tp.offsetWidth; tp.classList.add(p > prev ? 'up' : 'dn'); }
+    const c = e.querySelector('.tc'); c.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; c.className = 'tc ' + (ch >= 0 ? 'g' : 'r');
+    spark(e.querySelector('canvas'), h, ch >= 0);
+  }
+
+  /* instant sparkline history */
+  SY.forEach(s => fetch('https://api.binance.com/api/v3/klines?symbol=' + s[1].toUpperCase() + '&interval=15m&limit=40')
+    .then(r => r.json()).then(k => { if (!hist[s[0]] || hist[s[0]].length < 3) { hist[s[0]] = k.map(c => +c[4]); const h = hist[s[0]]; spark($('#apx-' + s[0] + ' canvas'), h, h[h.length - 1] >= h[0]); } }).catch(() => {}));
+
+  /* live stream, with CoinGecko fallback */
+  let got = false, polling = false;
+  function poll() {
+    if (polling) return; polling = true;
+    const run = () => fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + SY.map(s => s[2]).join(',') + '&vs_currencies=usd&include_24hr_change=true')
+      .then(r => r.json()).then(d => SY.forEach(s => d[s[2]] && upd(s[0], d[s[2]].usd, d[s[2]].usd_24h_change || 0))).catch(() => {});
+    run(); setInterval(run, 15000);
+  }
+  function connect() {
+    let ws; try { ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + SY.map(s => s[1] + '@ticker').join('/')); } catch (e) { poll(); return; }
+    ws.onmessage = e => { const d = JSON.parse(e.data).data, s = d && SY.find(x => x[1] === d.s.toLowerCase()); if (s) { got = true; upd(s[0], +d.c, +d.P); } };
+    ws.onerror = () => { if (!got) poll(); };
+    ws.onclose = () => { if (got) setTimeout(connect, 3000); else poll(); };
+  }
+  connect(); setTimeout(() => { if (!got) poll(); }, 6000);
+})();
+</script>
+<!-- ===== END LEDGER WOW v2 ===== -->
+
+<!-- ===== NO PINCH / DOUBLE-TAP ZOOM ===== -->
+<script>
+['gesturestart','gesturechange','gestureend'].forEach(e => document.addEventListener(e, ev => ev.preventDefault(), {passive:false}));
+let _lt = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - _lt <= 300) e.preventDefault(); _lt = n; }, {passive:false});
+document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, {passive:false});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Find the About Us link in the footer
+        const aboutLinks = document.querySelectorAll('a[href="about.html"]');
+        
+        aboutLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                // Save the current Y scroll position to session memory
+                sessionStorage.setItem('aboutScrollPos', window.scrollY);
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

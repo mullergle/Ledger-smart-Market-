@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Ledger Trade Market | Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050505; --panel:#0e0e10; --panel2:#151517; --input:#1a1a1d; --border:#2a2a2e;
+  --text:#ffffff; --muted:#9b9ba3; --purple:#d4d4d8; --purple2:#ffffff;
+  --teal:#1ebba3; --green:#10b981; --red:#f23645; --gold:#f59e0b;
+  --sbtop:#1c1c20; --sbbot:#050505;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 85% -10%,rgba(255,255,255,.07),transparent 60%),radial-gradient(700px 400px at 10% 110%,rgba(255,255,255,.04),transparent 60%),linear-gradient(180deg,#141416 0%,#050505 60%);
+  background-attachment:fixed}
+button{cursor:pointer;border:none;background:none;font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+input,select,textarea{font-family:inherit;outline:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#3a3a3f;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Loader / Toasts ---------- */
+.loader-overlay{position:fixed;inset:0;background:rgba(5,5,5,.88);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;visibility:hidden;transition:.3s}
+.loader-overlay.active{opacity:1;visibility:visible}
+.ios-spinner{position:relative;width:40px;height:40px;animation:spin 1.2s cubic-bezier(.45,.05,.15,1) infinite}
+.ios-spinner .dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.4)}
+.ios-spinner .dot:nth-child(1){top:0;left:50%;transform:translateX(-50%)}
+.ios-spinner .dot:nth-child(2){bottom:5px;right:3px}
+.ios-spinner .dot:nth-child(3){bottom:5px;left:3px}
+@keyframes spin{to{transform:rotate(1080deg)}}
+
+.toast-wrap{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;gap:10px;pointer-events:none;width:90%;max-width:400px}
+.toast{background:#17171a;border:1px solid var(--border);padding:13px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 12px 34px rgba(0,0,0,.6);animation:slideDown .3s ease;pointer-events:auto;font-size:14px}
+.toast .t-ico{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.toast.success{border-left:4px solid var(--teal)} .toast.success .t-ico{background:rgba(30,187,163,.2);color:var(--teal)}
+.toast.error{border-left:4px solid var(--red)} .toast.error .t-ico{background:rgba(242,54,69,.2);color:var(--red)}
+.toast.info{border-left:4px solid #fff} .toast.info .t-ico{background:rgba(255,255,255,.15);color:#fff}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- Gate ---------- */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:var(--panel);border:1px solid var(--border);padding:36px 28px;border-radius:20px;text-align:center;max-width:400px}
+.gate-card h2{font-size:18px;margin-bottom:8px}
+.gate-card p{color:var(--muted);font-size:14px;margin-bottom:20px}
+.gate-card a{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#ffffff,#c9c9ce);color:#0a0a0a;border-radius:10px;font-weight:700;font-size:14px}
+
+/* ---------- Layout ---------- */
+.app{display:none}
+.app.active{display:flex;min-height:100vh}
+.sidebar{width:264px;background:linear-gradient(180deg,var(--sbtop),var(--sbbot));padding:22px 0;position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;z-index:100;transition:transform .3s;box-shadow:6px 0 30px rgba(0,0,0,.5);border-right:1px solid rgba(255,255,255,.06)}
+.brand{padding:0 22px 22px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-logo{width:44px;height:44px;border:2px solid rgba(255,255,255,.85);border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05)}
+.brand h1{font-size:21px;font-weight:900;letter-spacing:1.5px;line-height:1}
+.brand span{display:block;font-size:8px;letter-spacing:2px;color:#c4c4cc;margin-top:4px;font-weight:600}
+.nav{flex:1;padding:14px 12px;overflow-y:auto}
+.nav-label{font-size:10px;letter-spacing:1.4px;color:#8a8a94;font-weight:700;padding:12px 14px 6px;text-transform:uppercase}
+.nav a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;color:#d0d0d6;font-size:14px;font-weight:500;margin-bottom:3px;transition:.2s;cursor:pointer;position:relative}
+.nav a svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav a.active{background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.02));color:#fff}
+.nav a.active::before{content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.6)}
+.nav a .badge{margin-left:auto;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:22px;text-align:center;box-shadow:0 0 10px rgba(242,54,69,.5)}
+.nav a .badge.pop{animation:badgePop .4s ease}
+@keyframes badgePop{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+.user-box{padding:16px 18px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:12px}
+.user-row{display:flex;align-items:center;gap:12px}
+.user-row .info{min-width:0}
+.user-box .name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-box .email{font-size:11px;color:#9b9ba6;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-box button{width:100%;padding:10px;background:rgba(255,255,255,.08);border-radius:8px;font-size:13px;font-weight:600;color:#ffb3c0;transition:.2s}
+.user-box button:hover{background:rgba(242,54,69,.2);color:#fff}
+
+.av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.av.sm{width:30px;height:30px;font-size:11px}
+.cell-user{display:flex;align-items:center;gap:10px;min-width:0}
+.cell-user .nm{font-weight:600;font-size:13px;line-height:1.25}
+.cell-user .em{font-size:11px;color:var(--muted);font-family:'SF Mono',Monaco,Consolas,monospace}
+
+.main{flex:1;margin-left:264px;padding:26px;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.topbar h2{font-size:23px;font-weight:800;letter-spacing:-.3px}
+.topbar .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.hamburger{display:none;width:42px;height:42px;background:var(--panel);border:1px solid var(--border);border-radius:10px;align-items:center;justify-content:center;position:relative}
+.hamburger svg{width:22px;height:22px;fill:#fff}
+.hamburger .hb-dot{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;display:none}
+.top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--border);padding:9px 14px;border-radius:10px;font-size:12px;font-weight:600;display:flex;gap:8px;align-items:center;color:#d0d0d6}
+.chip .clock{font-variant-numeric:tabular-nums;font-weight:700;color:#fff}
+.sys i{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);display:inline-block}
+.sys.ok i{background:var(--teal);box-shadow:0 0 10px var(--teal);animation:pulse 2s infinite}
+.sys.bad i{background:var(--red);box-shadow:0 0 10px var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.refresh-btn{background:var(--panel);border:1px solid var(--border);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;transition:.2s}
+.refresh-btn:hover{border-color:#fff;color:#fff}
+.refresh-btn svg{width:14px;height:14px;fill:currentColor}
+
+/* ---------- Hero ---------- */
+.hero{background:linear-gradient(120deg,rgba(255,255,255,.10),rgba(255,255,255,.03) 70%,rgba(14,14,16,.4));border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%)}
+.hero h3{font-size:22px;font-weight:800;letter-spacing:-.3px;position:relative;z-index:1}
+.hero p{font-size:13px;color:#bdbdc6;margin-top:4px;position:relative;z-index:1}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
+.qa{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;transition:.2s}
+.qa:hover{background:rgba(255,255,255,.18);border-color:#fff;transform:translateY(-1px)}
+.qa b{background:var(--red);border-radius:10px;font-size:11px;padding:1px 7px;min-width:20px;text-align:center}
+.qa b.zero{background:rgba(255,255,255,.18)}
+
+/* ---------- Stats ---------- */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+.stat-card{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--border);padding:18px 20px;border-radius:16px;position:relative;overflow:hidden;transition:.25s}
+.stat-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.4);box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ffffff,#3a3a3f)}
+.stat-card .icon{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.stat-card .icon svg{width:21px;height:21px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.stat-card.green .icon{background:rgba(30,187,163,.15)} .stat-card.green .icon svg{stroke:var(--teal)}
+.stat-card.red .icon{background:rgba(242,54,69,.15)} .stat-card.red .icon svg{stroke:var(--red)}
+.stat-card.gold .icon{background:rgba(245,158,11,.15)} .stat-card.gold .icon svg{stroke:var(--gold)}
+.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+.stat-card .value{font-size:26px;font-weight:800;margin-top:4px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+
+/* ---------- Cards / Tables ---------- */
+.grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}
+.grid-2.even{grid-template-columns:1fr 1.4fr}
+@media (max-width:1100px){.grid-2,.grid-2.even{grid-template-columns:1fr}}
+.card{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px}
+.grid-2 .card{margin-bottom:0}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.card-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-header h3 small{font-size:11px;color:var(--muted);font-weight:600;background:var(--input);padding:2px 9px;border-radius:10px}
+.card-header .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-chip{padding:6px 14px;border-radius:20px;background:var(--input);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);transition:.2s}
+.filter-chip:hover{color:#fff}
+.filter-chip.active{background:rgba(255,255,255,.14);border-color:#fff;color:#fff}
+.btn-export{padding:6px 14px;border-radius:20px;background:rgba(30,187,163,.12);border:1px solid rgba(30,187,163,.35);font-size:12px;font-weight:700;color:var(--teal);transition:.2s;display:flex;gap:6px;align-items:center}
+.btn-export:hover{background:rgba(30,187,163,.25)}
+.btn-export svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:600px}
+thead{background:rgba(0,0,0,.35)}
+th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border)}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid rgba(42,42,46,.6);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.04)}
+tr:last-child td{border-bottom:none}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.pending{background:rgba(245,158,11,.15);color:#f5c34a}
+.pill.approved{background:rgba(16,185,129,.15);color:#4ade80}
+.pill.rejected{background:rgba(242,54,69,.15);color:#ff6b7d}
+.pill.suspended{background:rgba(242,54,69,.15);color:#ff6b7d}
+.pill.active{background:rgba(16,185,129,.15);color:#4ade80}
+
+.action-btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn-sm{padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;transition:.15s;white-space:nowrap}
+.btn-approve{background:rgba(16,185,129,.15);color:#4ade80;border:1px solid rgba(16,185,129,.3)}
+.btn-approve:hover{background:rgba(16,185,129,.3)}
+.btn-reject{background:rgba(242,54,69,.15);color:#ff6b7d;border:1px solid rgba(242,54,69,.3)}
+.btn-reject:hover{background:rgba(242,54,69,.3)}
+.btn-view{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn-view:hover{background:rgba(255,255,255,.2)}
+.btn-delete{background:rgba(255,255,255,.05);color:#c9c9d1;border:1px solid var(--border)}
+.btn-delete:hover{background:rgba(242,54,69,.2);color:#ff6b7d}
+
+.empty{padding:50px 20px;text-align:center;color:var(--muted)}
+.empty svg{width:56px;height:56px;fill:#3a3a3f;margin-bottom:16px}
+.empty h4{font-size:15px;color:#c9c9d1;margin-bottom:6px}
+.empty p{font-size:13px}
+
+.section{display:none}
+.section.active{display:block;animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- Overview widgets ---------- */
+.chart-box{padding:12px 16px 16px}
+.chart-box canvas{width:100%;height:240px;display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);font-weight:600;padding:0 20px 14px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 20px}
+.donut{width:170px;height:170px;border-radius:50%;position:relative;background:conic-gradient(#2a2a2e 0 100%)}
+.donut::after{content:'';position:absolute;inset:22px;border-radius:50%;background:var(--panel)}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
+.donut-center b{font-size:28px;font-weight:800;line-height:1}
+.donut-center span{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600}
+.donut-legend{width:100%;display:flex;flex-direction:column;gap:8px}
+.donut-legend div{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.donut-legend div span{display:flex;align-items:center;gap:8px;color:#d0d0d6}
+.donut-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.donut-legend b{font-weight:700}
+.top-list{padding:8px 20px 16px}
+.top-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(42,42,46,.6)}
+.top-item:last-child{border-bottom:none}
+.top-item .rank{width:22px;font-size:12px;font-weight:800;color:var(--muted);text-align:center}
+.top-item .body{flex:1;min-width:0}
+.top-item .top-line{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:600}
+.top-item .top-line span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:6px;background:rgba(255,255,255,.07);border-radius:6px;margin-top:7px;overflow:hidden}
+.bar div{height:100%;border-radius:6px;background:linear-gradient(90deg,#ffffff,#5a5a60);width:0;transition:width .9s ease}
+.type-chip{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.type-chip.dep{color:#4ade80}
+.type-chip.wd{color:#ff8a98}
+
+/* ---------- Modals ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);z-index:5000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:18px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7);animation:slideDown .3s ease;position:relative}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ffffff,#55555a,#ffffff)}
+.modal-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);color:#c9c9d1;font-size:18px;line-height:1;transition:.15s}
+.modal-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.modal-body{padding:20px}
+.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.btn-secondary{padding:12px 20px;border-radius:10px;background:var(--input);border:1px solid var(--border);font-size:14px;font-weight:600;color:#c9c9d1;transition:.15s}
+.btn-secondary:hover{background:#26262a}
+.btn-primary{width:100%;background:linear-gradient(135deg,#ffffff,#c9c9ce);color:#0a0a0a;padding:15px;border-radius:10px;font-size:15px;font-weight:700;box-shadow:0 4px 15px rgba(255,255,255,.15);transition:.2s}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(255,255,255,.25)}
+.btn-primary:disabled{opacity:.6;cursor:wait;transform:none}
+.btn-primary.danger{background:linear-gradient(135deg,#f23645,#ff6b7d);color:#fff;box-shadow:0 4px 15px rgba(242,54,69,.35)}
+.btn-primary.success{background:linear-gradient(135deg,#10b981,#1ebba3);color:#fff;box-shadow:0 4px 15px rgba(16,185,129,.35)}
+
+.confirm-box{max-width:390px;text-align:center;padding:30px 24px}
+.cf-icon{width:60px;height:60px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
+.cf-icon.primary{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.4)}
+.cf-icon.success{background:rgba(16,185,129,.15);color:#4ade80;border:1.5px solid rgba(16,185,129,.4)}
+.cf-icon.danger{background:rgba(242,54,69,.15);color:#ff6b7d;border:1.5px solid rgba(242,54,69,.4)}
+.confirm-box h3{font-size:19px;margin-bottom:8px}
+.confirm-box p{font-size:14px;color:var(--muted);margin-bottom:22px}
+.confirm-actions{display:flex;gap:10px}
+.confirm-actions button{flex:1;padding:13px}
+
+.modal.trade-mode .hide-on-trade { display: none !important; }
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:500px){.form-row{grid-template-columns:1fr}}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:#c9c9d1;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--input);border:1px solid var(--border);color:#fff;padding:11px 14px;border-radius:8px;font-size:14px;transition:.2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.form-group input.invalid{border-color:var(--red)}
+.form-group textarea{resize:vertical;min-height:90px;line-height:1.5}
+
+/* ---------- Trade profit / loss card (inside Edit modal) ---------- */
+.trade-pl{margin:0 20px 16px;padding:16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18);display:none}
+.trade-pl.active{display:block}
+.tp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tp-head h4{font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:#fff;font-weight:800}
+.tp-tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--input);border:1px solid var(--border);color:#d0d0d6}
+.tp-stake{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:10px;background:var(--input);border:1px solid var(--border);margin-bottom:12px}
+.tp-stake span{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.tp-stake b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.tp-result{margin-top:12px;padding:16px;border-radius:12px;text-align:center;border:1px solid var(--border);background:rgba(255,255,255,.03);transition:.25s}
+.tp-result .tp-label{font-size:11px;letter-spacing:1px;font-weight:800;text-transform:uppercase;color:var(--muted)}
+.tp-result .tp-amt{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:2px 0;font-variant-numeric:tabular-nums}
+.tp-result .tp-sub{font-size:12px;color:var(--muted)}
+.tp-result.profit{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.45)}
+.tp-result.profit .tp-label,.tp-result.profit .tp-amt{color:#4ade80}
+.tp-result.loss{background:rgba(242,54,69,.12);border-color:rgba(242,54,69,.45)}
+.tp-result.loss .tp-label,.tp-result.loss .tp-amt{color:#ff6b7d}
+.tp-result.even .tp-label,.tp-result.even .tp-amt{color:#f5c34a}
+.tp-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.tp-warn{font-size:12px;color:#f5c34a;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);padding:8px 12px;border-radius:8px;margin-bottom:12px;display:none}
+.tp-warn.active{display:block}
+
+/* ---------- Support ---------- */
+.support-layout{display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 200px);min-height:500px}
+@media (max-width:900px){.support-layout{grid-template-columns:1fr;height:auto}}
+.support-users{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow-y:auto}
+.support-users .u-item{padding:14px 16px;border-bottom:1px solid rgba(42,42,46,.6);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:10px}
+.support-users .u-item .u-info{flex:1;min-width:0}
+.support-users .u-item:hover{background:rgba(255,255,255,.05)}
+.support-users .u-item.active{background:rgba(255,255,255,.10);border-left:3px solid #fff}
+.support-users .u-item .name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.support-users .u-item .email{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.support-users .u-item .u-badge{background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:22px;text-align:center;flex-shrink:0}
+.support-thread{background:var(--panel);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.thread-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.thread-header h4{font-size:14px}
+.thread-header p{font-size:12px;color:var(--muted);margin-top:2px}
+.thread-msgs{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;background:rgba(0,0,0,.3)}
+.chat-bubble{max-width:75%;padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.5;word-wrap:break-word}
+.chat-bubble.user{align-self:flex-start;background:var(--input);border-bottom-left-radius:4px;border:1px solid var(--border)}
+.chat-bubble.admin{align-self:flex-end;background:linear-gradient(135deg,#ffffff,#c9c9ce);color:#0a0a0a;border-bottom-right-radius:4px}
+.chat-bubble .time{display:block;font-size:10px;margin-top:4px;opacity:.7}
+.thread-input{padding:14px;border-top:1px solid var(--border);display:flex;gap:10px}
+.thread-input input{flex:1;background:var(--input);border:1px solid var(--border);color:#fff;padding:12px 16px;border-radius:24px;font-size:13px}
+.thread-input input:focus{border-color:#fff}
+.thread-input button{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ffffff,#c9c9ce);display:flex;align-items:center;justify-content:center}
+.thread-input button svg{width:18px;height:18px;fill:#0a0a0a}
+
+.kyc-img{width:100%;max-width:200px;border-radius:8px;cursor:pointer;border:1px solid var(--border);transition:.2s}
+.kyc-img:hover{transform:scale(1.02);border-color:#fff}
+.mono{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px;color:#c9c9d1}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99;display:none}
+.sidebar-overlay.active{display:block}
+
+@media (max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.active{transform:translateX(0)}
+  .main{margin-left:0;padding:16px}
+  .hamburger{display:flex}
+  .topbar h2{font-size:19px}
+  .stat-card .value{font-size:22px}
+  .hero h3{font-size:19px}
+  .chip.hide-m{display:none}
+}
+
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:64px !important}
+.pw-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;padding:6px 8px}
+.pw-meter{height:5px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;margin-top:8px}
+.pw-meter div{height:100%;width:0;transition:.3s}
+.pw-hint{font-size:11px;color:var(--muted);margin-top:5px}
+
+
+/* ---- NO ZOOM ---- */
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+input,select,textarea,
+.form-group input,.form-group select,.form-group textarea,
+.thread-input input,#userSearch{font-size:16px !important}
+</style>
+</head>
+<body>
+
+<div class="loader-overlay" id="loader"><div class="ios-spinner"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- GATE -->
+<div class="gate" id="gateView" style="display:none">
+  <div class="gate-card">
+    <h2>Not Authenticated</h2>
+    <p>Please log in first to access the admin panel.</p>
+    <a href="index.html">Go to Login</a>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="sidebar-overlay" id="sbOverlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="28" height="28" viewBox="0 0 60 60">
+          <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d4d4d8"/></linearGradient></defs>
+          <path d="M8 44 L30 14 L52 44" fill="none" stroke="url(#g2)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div><h1>LEDGER</h1><span>TRADE MARKET · ADMIN</span></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">Main</div>
+      <a data-section="overview" class="active">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Overview
+      </a>
+      <a data-section="users">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users <span class="badge" id="badgeUsers" style="display:none">0</span>
+      </a>
+      <div class="nav-label">Money</div>
+      <a data-section="deposits">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Deposits <span class="badge" id="badgeDeposits" style="display:none">0</span>
+      </a>
+      <a data-section="withdrawals">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><polyline points="22 10 2 10 2 15 22 15"/><line x1="7" y1="15" x2="7" y2="15"/></svg>
+        Withdrawals <span class="badge" id="badgeWithdrawals" style="display:none">0</span>
+      </a>
+      <a data-section="trades">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>
+        Trades <span class="badge" id="badgeTrades" style="display:none">0</span>
+      </a>
+      <div class="nav-label">Manage</div>
+      <a data-section="kyc">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M7 15h4"/></svg>
+        KYC <span class="badge" id="badgeKyc" style="display:none">0</span>
+      </a>
+      <a data-section="support">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Support <span class="badge" id="badgeSupport" style="display:none">0</span>
+      </a>
+      <a data-section="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="user-box">
+      <div class="user-row">
+        <span class="av" id="adminAv">AD</span>
+        <div class="info">
+          <div class="name" id="adminName">Admin</div>
+          <div class="email" id="adminEmail">—</div>
+        </div>
+      </div>
+      <button onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="hamburger" onclick="toggleSidebar()">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          <span class="hb-dot" id="hamburgerDot">0</span>
+        </button>
+        <div><h2 id="pageTitle">Overview</h2><div class="sub" id="pageSub">Platform performance at a glance</div></div>
+      </div>
+      <div class="top-actions">
+        <div class="chip sys" id="sysStatus" onclick="showBadgeDebug()" style="cursor:pointer" title="Tap for badge info"><i></i><span id="sysText">Checking…</span></div>
+        <div class="chip hide-m"><span id="clockDate">—</span><span class="clock" id="clockTime">--:--:--</span></div>
+        <button class="refresh-btn" onclick="refreshCurrent()"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Refresh</button>
+      </div>
+    </div>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="section active" id="sec-overview">
+      <div class="hero">
+        <div>
+          <h3 id="heroHello">Welcome back</h3>
+          <p id="heroSub">Here is what is happening on Ledger Trade Market today.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="qa" onclick="goSection('deposits')">Deposits <b class="zero" id="qaDep">0</b></button>
+          <button class="qa" onclick="goSection('withdrawals')">Withdrawals <b class="zero" id="qaWd">0</b></button>
+          <button class="qa" onclick="goSection('kyc')">KYC <b class="zero" id="qaKyc">0</b></button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="label">Total Users</div><div class="value" id="statUsers">—</div></div>
+        <div class="stat-card gold"><div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div class="label">Pending Deposits</div><div class="value" id="statDeposits">—</div></div>
+        <div class="stat-card red"><div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><polyline points="22 10 2 10 2 15 22 15"/></svg></div><div class="label">Pending Withdrawals</div><div class="value" id="statWithdrawals">—</div></div>
+        <div class="stat-card green"><div class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="label">Pending KYC</div><div class="value" id="statKyc">—</div></div>
+        <div class="stat-card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="label">Total User Balances</div><div class="value" id="statBalances">—</div></div>
+        <div class="stat-card green"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div><div class="label">Approved Deposits</div><div class="value" id="statDepVol">—</div></div>
+        <div class="stat-card red"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div><div class="label">Approved Withdrawals</div><div class="value" id="statWdVol">—</div></div>
+        <div class="stat-card gold"><div class="icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg></div><div class="label">Total Trades</div><div class="value" id="statTrades">—</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Cash Flow <small>Last 7 days</small></h3></div>
+          <div class="chart-box"><canvas id="flowChart"></canvas></div>
+          <div class="legend"><span><i style="background:#1ebba3"></i>Deposits</span><span><i style="background:#ffffff"></i>Withdrawals</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Request Status</h3></div>
+          <div class="donut-wrap">
+            <div class="donut" id="donut"><div class="donut-center"><b id="donutTotal">0</b><span>requests</span></div></div>
+            <div class="donut-legend" id="donutLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2 even" style="margin-top:16px">
+        <div class="card">
+          <div class="card-header"><h3>Top Users <small>by balance</small></h3></div>
+          <div class="top-list" id="topUsers"><div class="empty"><p>Loading…</p></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Recent Activity</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Type</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody id="recentActivity"><tr><td colspan="5"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= USERS ================= -->
+    <section class="section" id="sec-users">
+      <div class="card">
+        <div class="card-header">
+          <h3>All Users <small id="userCount">0</small></h3>
+          <div class="filters">
+            <button class="filter-chip active" data-ufilter="all">All</button>
+            <button class="filter-chip" data-ufilter="active">Active</button>
+            <button class="filter-chip" data-ufilter="suspended">Suspended</button>
+            <input type="text" id="userSearch" placeholder="Search name or email…" style="background:var(--input);border:1px solid var(--border);padding:8px 14px;border-radius:8px;color:#fff;font-size:13px;min-width:200px">
+            <button class="btn-export" onclick="exportUsers()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="usersTable"><tr><td colspan="4"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DEPOSITS ================= -->
+    <section class="section" id="sec-deposits">
+      <div class="card">
+        <div class="card-header"><h3>Deposits</h3><div class="filters">
+          <button class="filter-chip active" data-dfilter="all">All</button>
+          <button class="filter-chip" data-dfilter="Pending">Pending</button>
+          <button class="filter-chip" data-dfilter="Approved">Approved</button>
+          <button class="filter-chip" data-dfilter="Rejected">Rejected</button>
+          <button class="btn-export" onclick="exportDeposits()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>CSV</button>
+        </div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Receipt</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="depositsTable"><tr><td colspan="7"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= WITHDRAWALS ================= -->
+    <section class="section" id="sec-withdrawals">
+      <div class="card">
+        <div class="card-header"><h3>Withdrawals</h3><div class="filters">
+          <button class="filter-chip active" data-wfilter="all">All</button>
+          <button class="filter-chip" data-wfilter="Pending">Pending</button>
+          <button class="filter-chip" data-wfilter="Approved">Approved</button>
+          <button class="filter-chip" data-wfilter="Rejected">Rejected</button>
+          <button class="btn-export" onclick="exportWithdrawals()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>CSV</button>
+        </div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Wallet</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="withdrawalsTable"><tr><td colspan="7"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= KYC ================= -->
+    <section class="section" id="sec-kyc">
+      <div class="card">
+        <div class="card-header"><h3>KYC Requests</h3><div class="filters">
+          <button class="filter-chip active" data-kfilter="all">All</button>
+          <button class="filter-chip" data-kfilter="Pending">Pending</button>
+          <button class="filter-chip" data-kfilter="Approved">Approved</button>
+          <button class="filter-chip" data-kfilter="Rejected">Rejected</button>
+        </div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Document</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead>
+            <tbody id="kycTable"><tr><td colspan="5"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TRADES ================= -->
+    <section class="section" id="sec-trades">
+      <div class="card">
+        <div class="card-header"><h3>User Trades</h3><div class="filters">
+          <button class="filter-chip active" data-tfilter="all">All</button>
+          <button class="filter-chip" data-tfilter="Crypto">Crypto</button>
+          <button class="filter-chip" data-tfilter="Forex">Forex</button>
+          <button class="btn-export" onclick="exportTrades()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>CSV</button>
+        </div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Market</th><th>Pair</th><th>Side</th><th>Lots</th><th>Stop Loss</th><th>Amount</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="tradesTable"><tr><td colspan="9"><div class="empty"><p>Loading…</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SUPPORT ================= -->
+    <section class="section" id="sec-support">
+      <div class="support-layout">
+        <div class="support-users" id="supportUsers"><div class="empty"><p>Loading…</p></div></div>
+        <div class="support-thread" id="supportThread">
+          <div class="empty" style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center">
+            <svg viewBox="0 0 24 24" width="56" height="56"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <h4>Select a conversation</h4>
+            <p>Choose a user from the left to view their messages.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section class="section" id="sec-settings">
+
+<div class="card">
+  <div class="card-header"><h3>Change Password</h3></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Current Password</label>
+      <div class="pw-wrap"><input type="password" id="pwCurrent" autocomplete="current-password" placeholder="Enter current password"><button type="button" class="pw-eye" onclick="togglePw('pwCurrent',this)">Show</button></div>
+    </div>
+    <div class="form-group"><label>New Password</label>
+      <div class="pw-wrap"><input type="password" id="pwNew" autocomplete="new-password" placeholder="At least 8 characters"><button type="button" class="pw-eye" onclick="togglePw('pwNew',this)">Show</button></div>
+      <div class="pw-meter"><div id="pwBar"></div></div>
+      <div class="pw-hint" id="pwHint">Use 8+ characters with letters, numbers and symbols.</div>
+    </div>
+    <div class="form-group"><label>Confirm New Password</label>
+      <div class="pw-wrap"><input type="password" id="pwConfirm" autocomplete="new-password" placeholder="Repeat new password"><button type="button" class="pw-eye" onclick="togglePw('pwConfirm',this)">Show</button></div>
+    </div>
+    <button class="btn-primary" style="width:auto;padding:12px 28px" onclick="changePassword()">Update Password</button>
+  </div>
+</div>
+
+      <div class="card">
+        <div class="card-header"><h3>Deposit Wallet Addresses</h3></div>
+        <div class="modal-body">
+          <div class="form-group"><label>Bitcoin (BTC) Address</label><input id="setBtc" placeholder="Enter BTC address"></div>
+          <div class="form-group"><label>Ethereum (ETH) Address</label><input id="setEth" placeholder="Enter ETH address"></div>
+          <div class="form-group"><label>USDT (ERC20) Address</label><input id="setUsdt" placeholder="Enter USDT address"></div>
+          <div class="form-group"><label>TRON (TRX) Address</label><input id="setTrx" placeholder="Enter TRX address"></div>
+          <div class="form-group"><label>Solana (SOL) Address</label><input id="setSol" placeholder="Enter SOL address"></div>
+          <button class="btn-primary" style="width:auto;padding:12px 28px" onclick="saveSettings()">Save Changes</button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<!-- ================= MODALS ================= -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="userModalTitle">Edit User</h3><button class="modal-close" onclick="closeModal('userModal')">×</button></div>
+    <div class="modal-body">
+      <!-- Standard User Inputs (Hidden when editing a trade) -->
+      <div class="hide-on-trade">
+      <div class="form-row">
+        <div class="form-group"><label>Full Name</label><input id="umName"></div>
+        <div class="form-group"><label>Phone</label><input id="umPhone"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Balance (USD)</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umBalance"></div>
+        <div class="form-group"><label>Total Trade</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umTrade"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Assets</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umAssets"></div>
+        <div class="form-group"><label>Active Assets</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umActive"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>BTC Balance</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umBtc"></div>
+        <div class="form-group"><label>ETH Balance</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umEth"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>USDT Balance</label><input type="text" inputmode="decimal" autocomplete="off" class="money-input" id="umUsdt"></div>
+        <div class="form-group"><label>Status</label><select id="umSuspended"><option value="false">Active</option><option value="true">Suspended</option></select></div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Trade profit / loss card (only shown when Edit is opened from the Trades list) -->
+    <div class="trade-pl" id="tradePL">
+      <div class="tp-head"><h4>Trade Result</h4><span class="tp-tag" id="tpTag">—</span></div>
+      <div class="tp-warn" id="tpWarn">A result was already applied to this trade from this browser. Applying it again will change the balance a second time.</div>
+      <div class="tp-stake"><span>Amount traded</span><b id="tpStake">$0.00</b></div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Result amount (USD)</label>
+        <input type="text" inputmode="decimal" autocomplete="off" id="umTradeResult" placeholder="Enter the amount the trade ended with">
+      </div>
+      <div class="tp-result" id="tpResult">
+        <div class="tp-label" id="tpLabel">Profit / Loss</div>
+        <div class="tp-amt" id="tpAmt">$0.00</div>
+        <div class="tp-sub" id="tpSub">Below the traded amount = loss, above = profit.</div>
+      </div>
+      <div class="tp-note" id="tpNote"></div>
+    </div>
+
+    <div class="form-row" style="margin: 0 20px 14px; border-top: 1px solid var(--border); padding-top: 14px;">
+      <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
+        <label style="color: #fff;">Transaction Type</label>
+        <select id="umTxnType">
+          <option value="Deposit">Deposit</option>
+          <option value="Withdrawal">Withdrawal</option>
+          <option value="Crypto Profit">Crypto Profit</option>
+          <option value="Forex Profit">Forex Profit</option>
+          <option value="Crypto Loss">Crypto Loss</option>
+          <option value="Forex Loss">Forex Loss</option>
+          <option value="Bonus">Bonus</option>
+          <option value="Refund">Refund</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('userModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:12px 24px" onclick="saveUser()">Save User</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="kycModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header"><h3>Reject KYC</h3><button class="modal-close" onclick="closeModal('kycModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Rejection Reason</label><textarea id="kycReason" placeholder="e.g. Document unclear, expired, or mismatched..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('kycModal')">Cancel</button>
+      <button class="btn-primary danger" style="width:auto;padding:12px 24px" onclick="confirmKycReject()">Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom confirm popup (replaces the old browser popup) -->
+<div class="modal-overlay" id="confirmModal" style="z-index:6000">
+  <div class="modal confirm-box">
+    <div class="cf-icon primary" id="cfIcon">?</div>
+    <h3 id="cfTitle">Are you sure?</h3>
+    <p id="cfDesc"></p>
+    <div class="confirm-actions">
+      <button class="btn-secondary" id="cfCancel">Cancel</button>
+      <button class="btn-primary" id="cfOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imgModal" onclick="closeModal('imgModal')">
+  <img id="imgModalSrc" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.8)">
+</div>
+
+<script>
+/* =============================================================
+   NO ZOOM (pinch, double-tap, ctrl+wheel)
+============================================================= */
+['gesturestart','gesturechange','gestureend'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), {passive:false})
+);
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, {passive:false});
+document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, {passive:false});
+
+/* =============================================================
+   CONFIG
+============================================================= */
+const API = 'https://apexline-market.onrender.com';
+const SESSION_KEY = 'nexoraUser';
+const SEEN_TRADES_KEY = 'apexAdminSeenTrades';
+const SETTLED_TRADES_KEY = 'apexAdminSettledTrades';
+const SEEN_USERS_KEY = 'apexAdminSeenUsers';
+const BADGE_POLL_MS = 15000;
+
+/* Only these trade types are shown to the admin (live package trades are hidden) */
+const TRADE_MARKETS = ['Crypto', 'Forex'];
+const isMarketTrade = t => {
+  const ty = String(t.trade_type ?? t.type ?? '').toLowerCase();
+  return ty.includes('crypto') || ty.includes('forex');
+};
+const onlyMarketTrades = list => (list || []).filter(isMarketTrade);
+const tradeKey = t => String(t.id ?? ((t.user_id || '') + '|' + (t.created_at || '')));
+
+let admin = null;
+let state = {
+  users: [], deposits: [], withdrawals: [], kyc: [],
+  depositFilter: 'all', withdrawalFilter: 'all', kycFilter: 'all', userFilter: 'all',
+  editingUserId: null, rejectKycId: null,
+  editingTrade: null, editingBaseBalance: 0,
+  supportUserId: null, supportThreadInterval: null,
+  trades: [], tradeFilter: 'all', knownTradeIds: null,
+  supportUnread: {},
+  badgeCounts: {}
+};
+
+const $ = id => document.getElementById(id);
+const showLoader = () => $('loader').classList.add('active');
+const hideLoader = () => $('loader').classList.remove('active');
+const fmt = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '—';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const TITLES = {
+  overview:['Overview','Platform performance at a glance'],
+  users:['Users','Manage all platform users'],
+  deposits:['Deposits','Review and approve deposit requests'],
+  withdrawals:['Withdrawals','Review and approve withdrawal requests'],
+  kyc:['KYC Verification','Verify user identity documents'],
+  trades:['Trades','Live feed of crypto and forex trades placed by users'],
+  support:['Support Center','Respond to user messages'],
+  settings:['Settings','Configure deposit wallet addresses']
+};
+
+/* ---------- Small helpers ---------- */
+function initials(name) {
+  const p = String(name || '?').trim().split(/\s+/);
+  return ((p[0]?.[0] || '?') + (p[1]?.[0] || '')).toUpperCase();
+}
+function avatar(name, cls) {
+  let h = 0; const s = String(name || '?');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return `<span class="av ${cls || ''}" style="background:linear-gradient(135deg,hsl(${h},62%,48%),hsl(${(h+40)%360},62%,38%))">${esc(initials(name))}</span>`;
+}
+function userCell(name, email) {
+  return `<div class="cell-user">${avatar(name, 'sm')}<div><div class="nm">${esc(name || 'Unknown')}</div><div class="em">${esc(email || '')}</div></div></div>`;
+}
+function compact(n) {
+  n = Number(n) || 0;
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(Math.round(n));
+}
+function countTo(el, to, formatter) {
+  if (!el) return;
+  const from = Number(el.dataset.v || 0);
+  el.dataset.v = to;
+  const t0 = performance.now(), dur = 800;
+  (function step(t) {
+    const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = formatter(from + (to - from) * e);
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+function toast(type, msg) {
+  const wrap = $('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const ico = document.createElement('span'); ico.className = 't-ico';
+  ico.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : 'i';
+  const txt = document.createElement('span'); txt.textContent = msg;
+  el.appendChild(ico); el.appendChild(txt);
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateY(-20px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(), 300); }, 4000);
+}
+
+function closeModal(id) { $(id).classList.remove('active'); }
+function openModal(id) { $(id).classList.add('active'); }
+
+/* Nice confirm popup (returns true / false) */
+function askConfirm(title, desc, kind, okText) {
+  return new Promise(resolve => {
+    kind = kind || 'primary';
+    $('cfTitle').textContent = title;
+    $('cfDesc').textContent = desc;
+    const ico = $('cfIcon');
+    ico.className = 'cf-icon ' + kind;
+    ico.textContent = kind === 'danger' ? '!' : kind === 'success' ? '✓' : '?';
+    const ok = $('cfOk'), cancel = $('cfCancel');
+    ok.className = 'btn-primary ' + (kind === 'danger' ? 'danger' : kind === 'success' ? 'success' : '');
+    ok.textContent = okText || 'Confirm';
+    openModal('confirmModal');
+    const done = v => { closeModal('confirmModal'); ok.onclick = null; cancel.onclick = null; resolve(v); };
+    ok.onclick = () => done(true);
+    cancel.onclick = () => done(false);
+  });
+}
+
+/* CSV export */
+function exportCsv(name, rows) {
+  const csv = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast('success', 'File downloaded.');
+}
+
+function toggleSidebar() {
+  $('sidebar').classList.toggle('active');
+  $('sbOverlay').classList.toggle('active');
+}
+$('sbOverlay')?.addEventListener('click', toggleSidebar);
+
+async function api(path, options = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
+  return data;
+}
+
+/* ---------- Live clock + system status ---------- */
+function updateClock() {
+  const n = new Date();
+  $('clockTime').textContent = n.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  $('clockDate').textContent = n.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+}
+setInterval(updateClock, 1000); updateClock();
+
+function showBadgeDebug() {
+  const d = state.badgeDebug;
+  if (!d) { toast('info', 'Badges have not loaded yet.'); return; }
+  if (d.error) { toast('error', 'Trades request failed: ' + d.error); return; }
+  const t = Object.entries(d.types).map(([k, v]) => k + ': ' + v).join(', ') || 'none';
+  toast('info', 'Trades received ' + d.received + ' • shown ' + d.shown + ' • new ' + d.unseen + ' • types → ' + t);
+}
+
+function setSys(ok) {
+  const el = $('sysStatus');
+  el.classList.remove('ok', 'bad');
+  el.classList.add(ok ? 'ok' : 'bad');
+  $('sysText').textContent = ok ? 'System online' : 'Server unreachable';
+}
+
+/* =============================================================
+   BOOT
+============================================================= */
+(function boot() {
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) {
+    $('gateView').style.display = 'flex';
+    return;
+  }
+  try {
+    admin = JSON.parse(raw);
+    if (!admin || !admin.id) throw new Error('bad');
+    startApp();
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+    $('gateView').style.display = 'flex';
+  }
+})();
+
+function logout() {
+  ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'].forEach(k => localStorage.removeItem(k));
+  sessionStorage.clear();
+  window.location.replace('index.html');
+}
+
+function startApp() {
+  $('app').classList.add('active');
+  $('adminName').textContent = admin.full_name || 'Admin';
+  $('adminEmail').textContent = admin.email || '';
+  $('adminAv').outerHTML = avatar(admin.full_name || 'Admin').replace('<span class="av ', '<span id="adminAv" class="av ');
+
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  $('heroHello').textContent = greet + ', ' + ((admin.full_name || 'Admin').split(' ')[0]) + ' 👋';
+
+  loadOverview();
+  updateBadges();
+  setInterval(updateBadges, BADGE_POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBadges(); });
+}
+
+function currentSection() {
+  return document.querySelector('.nav a.active')?.dataset.section;
+}
+function goSection(s) {
+  document.querySelector('.nav a[data-section="' + s + '"]')?.click();
+}
+
+/* =============================================================
+   NAV
+============================================================= */
+document.querySelectorAll('.nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    const sec = a.dataset.section;
+    document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    $('sec-' + sec).classList.add('active');
+    $('pageTitle').textContent = TITLES[sec][0];
+    $('pageSub').textContent = TITLES[sec][1];
+    if (window.innerWidth <= 900 && $('sidebar').classList.contains('active')) toggleSidebar();
+    window.scrollTo({top:0, behavior:'smooth'});
+
+    if (sec === 'overview') loadOverview();
+    if (sec === 'users') loadUsers();
+    if (sec === 'deposits') loadDeposits();
+    if (sec === 'withdrawals') loadWithdrawals();
+    if (sec === 'kyc') loadKyc();
+    if (sec === 'trades') loadTrades();
+    if (sec === 'support') loadSupportUsers();
+    if (sec === 'settings') loadSettings();
+  });
+});
+
+function refreshCurrent() {
+  const active = currentSection();
+  if (active === 'overview') loadOverview();
+  else if (active === 'users') loadUsers();
+  else if (active === 'deposits') loadDeposits();
+  else if (active === 'withdrawals') loadWithdrawals();
+  else if (active === 'kyc') loadKyc();
+  else if (active === 'trades') loadTrades();
+  else if (active === 'support') loadSupportUsers();
+  else if (active === 'settings') loadSettings();
+  updateBadges();
+  toast('info', 'Refreshed.');
+}
+
+/* =============================================================
+   BADGES
+============================================================= */
+function setBadge(id, n) {
+  const el = $(id);
+  if (!el) return;
+  n = Number(n) || 0;
+  const prev = state.badgeCounts[id] || 0;
+  if (n > 0) {
+    el.textContent = n > 99 ? '99+' : n;
+    el.style.display = 'inline-block';
+    if (n > prev) {
+      el.classList.remove('pop');
+      void el.offsetWidth;
+      el.classList.add('pop');
+    }
+  } else {
+    el.style.display = 'none';
+  }
+  state.badgeCounts[id] = n;
+  updateHamburgerDot();
+  updateQuickActions();
+}
+
+function updateQuickActions() {
+  const set = (id, n) => { const el = $(id); if (!el) return; el.textContent = n; el.classList.toggle('zero', !n); };
+  set('qaDep', state.badgeCounts.badgeDeposits || 0);
+  set('qaWd', state.badgeCounts.badgeWithdrawals || 0);
+  set('qaKyc', state.badgeCounts.badgeKyc || 0);
+}
+
+function updateHamburgerDot() {
+  const total = Object.values(state.badgeCounts).reduce((a, b) => a + (b || 0), 0);
+  const dot = $('hamburgerDot');
+  if (!dot) return;
+  if (total > 0) { dot.textContent = total > 99 ? '99+' : total; dot.style.display = 'block'; }
+  else dot.style.display = 'none';
+}
+
+function getSeenTrades() {
+  try {
+    const raw = localStorage.getItem(SEEN_TRADES_KEY);
+    return raw ? new Set(JSON.parse(raw)) : null;
+  } catch { return null; }
+}
+function saveSeenTrades(ids) {
+  try { localStorage.setItem(SEEN_TRADES_KEY, JSON.stringify([...ids].slice(-5000))); } catch {}
+}
+function markTradesSeen(trades) {
+  const merged = getSeenTrades() || new Set();
+  (trades || []).forEach(t => merged.add(tradeKey(t)));
+  saveSeenTrades(merged);
+  setBadge('badgeTrades', 0);
+}
+/* Every trade the admin has not opened the Trades page for counts as new.
+   (No first-run baseline, so trades placed while the admin was away always show up.) */
+function countUnseenTrades(trades) {
+  const seen = getSeenTrades() || new Set();
+  return trades.filter(t => !seen.has(tradeKey(t))).length;
+}
+
+/* New-user tracking for the Users badge */
+function getSeenUsers() {
+  try { const raw = localStorage.getItem(SEEN_USERS_KEY); return raw ? new Set(JSON.parse(raw)) : null; } catch { return null; }
+}
+function saveSeenUsers(ids) {
+  try { localStorage.setItem(SEEN_USERS_KEY, JSON.stringify([...ids].slice(-5000))); } catch {}
+}
+function markUsersSeen(users) {
+  saveSeenUsers(new Set((users || []).map(u => u.id)));
+  setBadge('badgeUsers', 0);
+}
+function countUnseenUsers(users) {
+  const seen = getSeenUsers();
+  if (!seen) { saveSeenUsers(new Set(users.map(u => u.id))); return 0; }
+  return users.filter(u => !seen.has(u.id)).length;
+}
+
+/* Trades that already had a result applied from this browser */
+function getSettledTrades() {
+  try { return new Set(JSON.parse(localStorage.getItem(SETTLED_TRADES_KEY) || '[]')); } catch { return new Set(); }
+}
+function markTradeSettled(id) {
+  try {
+    const s = getSettledTrades(); s.add(String(id));
+    localStorage.setItem(SETTLED_TRADES_KEY, JSON.stringify([...s].slice(-1000)));
+  } catch {}
+}
+
+function readUnread(u) {
+  const v = u.unread_count ?? u.unread ?? u.unread_messages ?? u.unreadCount ?? 0;
+  return Number(v) || 0;
+}
+async function fetchSupportUnread(notif) {
+  if (notif) {
+    const direct = notif.unreadMessages ?? notif.unreadSupport ?? notif.pendingSupport ?? notif.unreadSupportMessages ?? notif.supportUnread;
+    if (direct !== undefined && direct !== null) return Number(direct) || 0;
+  }
+  const data = await api('/admin/support/users');
+  const users = data.users || [];
+  const map = {};
+  let total = 0;
+  users.forEach(u => {
+    const c = readUnread(u);
+    if (c > 0) { map[u.id] = c; total += c; }
+  });
+  state.supportUnread = map;
+  return total;
+}
+
+async function updateBadges() {
+  try {
+    // Ask for everything at once; one slow/failed request never blocks the others
+    const notifP = api('/admin/notifications');
+    const [notifR, depR, wdR, kycR, tradesR, usersR] = await Promise.allSettled([
+      notifP,
+      api('/admin/deposits'),
+      api('/admin/withdrawals'),
+      api('/admin/kyc'),
+      api('/admin/trades').catch(() => api('/admin/trades')),
+      api('/admin/users')
+    ]);
+    const notif = notifR.status === 'fulfilled' ? notifR.value : null;
+
+    const supportR = await Promise.allSettled([fetchSupportUnread(notif)]).then(r => r[0]);
+
+    const anyOk = [notifR, depR, wdR, kycR, tradesR, usersR, supportR].some(r => r.status === 'fulfilled');
+    setSys(anyOk);
+
+    // Deposits (count real pending rows, fall back to the notifications endpoint)
+    if (depR.status === 'fulfilled') {
+      setBadge('badgeDeposits', (depR.value.deposits || []).filter(d => d.status === 'Pending').length);
+    } else if (notif) setBadge('badgeDeposits', notif.pendingDeposits);
+
+    // Withdrawals
+    if (wdR.status === 'fulfilled') {
+      setBadge('badgeWithdrawals', (wdR.value.withdrawals || []).filter(w => w.status === 'Pending').length);
+    } else if (notif) setBadge('badgeWithdrawals', notif.pendingWithdrawals);
+
+    // KYC
+    if (kycR.status === 'fulfilled') {
+      setBadge('badgeKyc', (kycR.value.requests || []).filter(r => r.status === 'Pending').length);
+    }
+
+    // Trades (Crypto + Forex only)
+    if (tradesR.status !== 'fulfilled') {
+      state.badgeDebug = { error: String(tradesR.reason && tradesR.reason.message || tradesR.reason) };
+      if (!state._tradeErrShown) { state._tradeErrShown = true; toast('error', 'Trades badge: could not load trades (' + state.badgeDebug.error + ')'); }
+    }
+    if (tradesR.status === 'fulfilled') {
+      state._tradeErrShown = false;
+      const all = tradesR.value.trades || [];
+      const list = onlyMarketTrades(all);
+      const types = {};
+      all.forEach(t => { const k = String(t.trade_type ?? t.type ?? 'unknown'); types[k] = (types[k] || 0) + 1; });
+      state.badgeDebug = { received: all.length, shown: list.length, types, unseen: countUnseenTrades(list) };
+      if (currentSection() === 'trades') {
+        markTradesSeen(list);
+      } else {
+        const prev = state.badgeCounts.badgeTrades || 0;
+        const unseen = countUnseenTrades(list);
+        setBadge('badgeTrades', unseen);
+        if (unseen > prev) toast('info', (unseen - prev) + ' new trade' + (unseen - prev > 1 ? 's' : '') + ' placed');
+      }
+    }
+
+    // Users (new sign-ups since the Users page was last opened)
+    if (usersR.status === 'fulfilled') {
+      const list = usersR.value.users || [];
+      if (currentSection() === 'users') {
+        markUsersSeen(list);
+      } else {
+        const prev = state.badgeCounts.badgeUsers || 0;
+        const unseen = countUnseenUsers(list);
+        setBadge('badgeUsers', unseen);
+        if (unseen > prev) toast('info', (unseen - prev) + ' new user' + (unseen - prev > 1 ? 's' : '') + ' registered');
+      }
+    }
+
+    // Support
+    if (supportR.status === 'fulfilled') {
+      let n = supportR.value;
+      if (currentSection() === 'support' && state.supportUserId && state.supportUnread[state.supportUserId]) {
+        n -= state.supportUnread[state.supportUserId];
+        delete state.supportUnread[state.supportUserId];
+      }
+      const prev = state.badgeCounts.badgeSupport || 0;
+      setBadge('badgeSupport', Math.max(0, n));
+      if (n > prev) toast('info', 'New support message');
+    }
+  } catch (e) { setSys(false); }
+}
+
+/* =============================================================
+   OVERVIEW
+============================================================= */
+async function loadOverview() {
+  showLoader();
+  try {
+    const [usersResp, notif, deposits, withdrawals, tradesResp] = await Promise.all([
+      api('/admin/users'),
+      api('/admin/notifications'),
+      api('/admin/deposits'),
+      api('/admin/withdrawals'),
+      api('/admin/trades').catch(() => ({trades: []}))
+    ]);
+    state.users = usersResp.users || [];
+    state.deposits = deposits.deposits || [];
+    state.withdrawals = withdrawals.withdrawals || [];
+    state.trades = onlyMarketTrades(tradesResp.trades);
+
+    const num = v => Math.round(v).toLocaleString('en-US');
+    const money = v => '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    countTo($('statUsers'), state.users.length, num);
+    countTo($('statDeposits'), notif.pendingDeposits || 0, num);
+    countTo($('statWithdrawals'), notif.pendingWithdrawals || 0, num);
+    countTo($('statTrades'), state.trades.length, num);
+
+    const totalBal = state.users.reduce((s, u) => s + Number(u.balance || 0), 0);
+    const depVol = state.deposits.filter(d => d.status === 'Approved').reduce((s, d) => s + Number(d.amount || 0), 0);
+    const wdVol = state.withdrawals.filter(w => w.status === 'Approved').reduce((s, w) => s + Number(w.amount || 0), 0);
+    countTo($('statBalances'), totalBal, money);
+    countTo($('statDepVol'), depVol, money);
+    countTo($('statWdVol'), wdVol, money);
+
+    let pendingKyc = 0;
+    try {
+      const k = await api('/admin/kyc');
+      pendingKyc = (k.requests || []).filter(r => r.status === 'Pending').length;
+    } catch {}
+    countTo($('statKyc'), pendingKyc, num);
+
+    const pd = notif.pendingDeposits || 0, pw = notif.pendingWithdrawals || 0;
+    const todo = pd + pw + pendingKyc;
+    $('heroSub').textContent = todo
+      ? 'You have ' + todo + ' item' + (todo > 1 ? 's' : '') + ' waiting for your review.'
+      : 'Everything is under control. Nothing is waiting for review.';
+
+    renderRecentActivity();
+    renderTopUsers();
+    renderDonut();
+    requestAnimationFrame(drawFlowChart);
+
+    updateBadges();
+  } catch (err) {
+    toast('error', 'Failed to load overview: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+function renderRecentActivity() {
+  const combined = [
+    ...state.deposits.map(d => ({...d, _type:'Deposit', _user:d.users?.full_name || 'Unknown'})),
+    ...state.withdrawals.map(w => ({...w, _type:'Withdrawal', _user:w.users?.full_name || 'Unknown'}))
+  ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,7);
+
+  const tbody = $('recentActivity');
+  if (!combined.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><p>No recent activity.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = combined.map(r => `
+    <tr>
+      <td><span class="type-chip ${r._type === 'Deposit' ? 'dep' : 'wd'}">${r._type === 'Deposit' ? '↑' : '↓'} ${r._type}</span></td>
+      <td>${userCell(r._user, '')}</td>
+      <td><b>$${fmt(r.amount)}</b></td>
+      <td><span class="pill ${String(r.status).toLowerCase()}">${esc(r.status)}</span></td>
+      <td class="mono">${fmtDate(r.created_at)}</td>
+    </tr>`).join('');
+}
+
+function renderTopUsers() {
+  const box = $('topUsers');
+  const top = [...state.users].sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0)).slice(0, 5);
+  if (!top.length) { box.innerHTML = '<div class="empty"><p>No users yet.</p></div>'; return; }
+  const max = Math.max(1, ...top.map(u => Number(u.balance || 0)));
+  box.innerHTML = top.map((u, i) => `
+    <div class="top-item">
+      <div class="rank">${i + 1}</div>
+      ${avatar(u.full_name, 'sm')}
+      <div class="body">
+        <div class="top-line"><span>${esc(u.full_name || 'Unknown')}</span><span>$${fmt(u.balance)}</span></div>
+        <div class="bar"><div data-w="${Math.max(3, Number(u.balance || 0) / max * 100)}"></div></div>
+      </div>
+    </div>`).join('');
+  setTimeout(() => box.querySelectorAll('.bar div').forEach(b => b.style.width = b.dataset.w + '%'), 60);
+}
+
+function renderDonut() {
+  const all = [...state.deposits, ...state.withdrawals];
+  const c = {Pending: 0, Approved: 0, Rejected: 0};
+  all.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
+  const total = c.Pending + c.Approved + c.Rejected;
+  $('donutTotal').textContent = total;
+  const colors = {Pending: '#f59e0b', Approved: '#10b981', Rejected: '#f23645'};
+  let grad;
+  if (!total) grad = '#2a2a2e 0 100%';
+  else {
+    let acc = 0;
+    grad = ['Approved', 'Pending', 'Rejected'].map(k => {
+      const from = acc; acc += c[k] / total * 100;
+      return colors[k] + ' ' + from + '% ' + acc + '%';
+    }).join(',');
+  }
+  $('donut').style.background = 'conic-gradient(' + grad + ')';
+  $('donutLegend').innerHTML = ['Approved', 'Pending', 'Rejected'].map(k =>
+    `<div><span><i style="background:${colors[k]}"></i>${k}</span><b>${c[k]}</b></div>`).join('');
+}
+
+function drawFlowChart() {
+  const cv = $('flowChart');
+  if (!cv) return;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+    days.push({d, dep: 0, wd: 0});
+  }
+  const find = date => {
+    const x = new Date(date); x.setHours(0, 0, 0, 0);
+    return days.find(o => o.d.getTime() === x.getTime());
+  };
+  state.deposits.forEach(r => { if (r.status !== 'Rejected') { const o = find(r.created_at); if (o) o.dep += Number(r.amount || 0); } });
+  state.withdrawals.forEach(r => { if (r.status !== 'Rejected') { const o = find(r.created_at); if (o) o.wd += Number(r.amount || 0); } });
+
+  const max = Math.max(1, ...days.map(o => Math.max(o.dep, o.wd)));
+  const padL = 44, padB = 26, padT = 10, padR = 6;
+  const cw = w - padL - padR, ch = h - padT - padB;
+
+  c.font = '11px Inter, sans-serif';
+  c.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + ch - (ch * i / 4);
+    c.strokeStyle = 'rgba(255,255,255,0.06)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(padL, y); c.lineTo(w - padR, y); c.stroke();
+    c.fillStyle = '#7d7d88'; c.textAlign = 'right';
+    c.fillText('$' + compact(max * i / 4), padL - 8, y);
+  }
+
+  const slot = cw / days.length, bw = Math.min(22, slot * 0.28);
+  const bar = (x, y, bwid, bh, colTop, colBot) => {
+    if (bh < 1) return;
+    const r = Math.min(5, bwid / 2, bh);
+    const g = c.createLinearGradient(0, y, 0, y + bh);
+    g.addColorStop(0, colTop); g.addColorStop(1, colBot);
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(x, y + bh); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y);
+    c.lineTo(x + bwid - r, y); c.quadraticCurveTo(x + bwid, y, x + bwid, y + r);
+    c.lineTo(x + bwid, y + bh); c.closePath(); c.fill();
+  };
+  days.forEach((o, i) => {
+    const cx = padL + slot * i + slot / 2;
+    const dh = ch * (o.dep / max), wh = ch * (o.wd / max);
+    bar(cx - bw - 2, padT + ch - dh, bw, dh, '#2ee6c5', '#12806f');
+    bar(cx + 2, padT + ch - wh, bw, wh, '#ffffff', '#4a4a50');
+    c.fillStyle = '#9a9aa6'; c.textAlign = 'center';
+    c.fillText(o.d.toLocaleDateString('en-US', {weekday: 'short'}), cx, h - 10);
+  });
+}
+window.addEventListener('resize', () => { if (currentSection() === 'overview') drawFlowChart(); });
+
+/* =============================================================
+   USERS
+============================================================= */
+async function loadUsers() {
+  showLoader();
+  try {
+    const data = await api('/admin/users');
+    state.users = data.users || [];
+    renderUsers();
+    if (currentSection() === 'users') markUsersSeen(state.users);
+  } catch (err) {
+    toast('error', 'Failed to load users: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+document.querySelectorAll('[data-ufilter]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-ufilter]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.userFilter = b.dataset.ufilter;
+  renderUsers();
+}));
+$('userSearch')?.addEventListener('input', renderUsers);
+
+function filteredUsers() {
+  const q = ($('userSearch')?.value || '').toLowerCase().trim();
+  const f = state.userFilter;
+  return state.users.filter(u =>
+    (!q || (u.full_name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)) &&
+    (f === 'all' || (f === 'suspended' ? u.is_suspended : !u.is_suspended))
+  );
+}
+
+function renderUsers() {
+  const list = filteredUsers();
+  $('userCount').textContent = list.length;
+  const tbody = $('usersTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty"><p>No users found.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(u => `
+    <tr>
+      <td>${userCell(u.full_name, u.email)}</td>
+      <td><b>$${fmt(u.balance)}</b></td>
+      <td>${u.is_suspended ? '<span class="pill suspended">Suspended</span>' : '<span class="pill active">Active</span>'}</td>
+      <td><button class="btn-sm btn-view" onclick="editUser('${esc(u.id)}')">Edit</button></td>
+    </tr>`).join('');
+}
+function exportUsers() {
+  exportCsv('users', [['Name','Email','Balance','Status'],
+    ...filteredUsers().map(u => [u.full_name, u.email, u.balance, u.is_suspended ? 'Suspended' : 'Active'])]);
+}
+
+/* ---- Money-field validation ---- */
+const MONEY_FIELDS = [
+  ['umBalance', 'Balance'],
+  ['umTrade',   'Total Trade'],
+  ['umAssets',  'Assets'],
+  ['umActive',  'Active Assets'],
+  ['umBtc',     'BTC Balance'],
+  ['umEth',     'ETH Balance'],
+  ['umUsdt',    'USDT Balance']
+];
+
+MONEY_FIELDS.forEach(([id]) => {
+  $(id)?.addEventListener('input', () => $(id).classList.remove('invalid'));
+});
+
+function readMoneyFields() {
+  const vals = {};
+  for (const [id, label] of MONEY_FIELDS) {
+    const el = $(id);
+    const raw = el.value.trim();
+    if (raw.includes(',')) {
+      el.classList.add('invalid'); el.focus();
+      toast('error', label + ': remove the comma (type 1000, not 1,000).');
+      return null;
+    }
+    if (raw !== '' && !/^-?\d+(\.\d+)?$/.test(raw)) {
+      el.classList.add('invalid'); el.focus();
+      toast('error', label + ': enter a valid number.');
+      return null;
+    }
+    vals[id] = raw === '' ? 0 : Number(raw);
+  }
+  return vals;
+}
+
+/* ---- Trade profit / loss card ---- */
+function round2(n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100; }
+
+/* Returns {valid, empty, result, diff, outcome} for the result input */
+function readTradeResult() {
+  const t = state.editingTrade;
+  const el = $('umTradeResult');
+  const raw = el.value.trim();
+  if (!t || raw === '') return { valid: true, empty: true };
+  if (raw.includes(',') || !/^\d+(\.\d+)?$/.test(raw)) return { valid: false, empty: false };
+  const stake = Number(t.amount || 0);
+  const result = Number(raw);
+  const diff = round2(result - stake);
+  const outcome = diff > 0 ? 'profit' : diff < 0 ? 'loss' : 'even';
+  return { valid: true, empty: false, result, stake, diff, outcome };
+}
+
+function updateTradePL() {
+  const t = state.editingTrade;
+  if (!t) return;
+  const box = $('tpResult'), label = $('tpLabel'), amt = $('tpAmt'), sub = $('tpSub'), note = $('tpNote');
+  const r = readTradeResult();
+  box.className = 'tp-result';
+  $('umTradeResult').classList.remove('invalid');
+
+  if (r.empty) {
+    label.textContent = 'Profit / Loss';
+    amt.textContent = '$0.00';
+    sub.textContent = 'Below the traded amount = loss, above = profit.';
+    note.textContent = '';
+    $('umBalance').value = state.editingBaseBalance;
+    return;
+  }
+  if (!r.valid) {
+    $('umTradeResult').classList.add('invalid');
+    label.textContent = 'Invalid amount';
+    amt.textContent = '—';
+    sub.textContent = 'Type a plain number, for example 150 or 80.5 (no commas).';
+    note.textContent = '';
+    return;
+  }
+
+  // Add the ENTIRE result amount back to the current balance, not just the profit
+  const newBal = round2(state.editingBaseBalance + r.result);
+  if (r.outcome === 'profit') {
+    box.classList.add('profit');
+    label.textContent = 'Profit';
+    amt.textContent = '+$' + fmt(r.diff);
+    sub.textContent = '$' + fmt(r.result) + ' returned on $' + fmt(r.stake) + ' traded';
+  } else if (r.outcome === 'loss') {
+    box.classList.add('loss');
+    label.textContent = 'Loss';
+    amt.textContent = '-$' + fmt(Math.abs(r.diff));
+    sub.textContent = '$' + fmt(r.result) + ' returned on $' + fmt(r.stake) + ' traded';
+  } else {
+    box.classList.add('even');
+    label.textContent = 'Break-even';
+    amt.textContent = '$0.00';
+    sub.textContent = 'The result equals the amount traded.';
+  }
+
+  // Auto-fill balance + transaction type so the admin can see exactly what will be saved
+  $('umBalance').value = newBal;
+  const market = t.trade_type === 'Forex' ? 'Forex' : 'Crypto';
+  if (r.outcome === 'profit') $('umTxnType').value = market + ' Profit';
+  else if (r.outcome === 'loss') $('umTxnType').value = market + ' Loss';
+  note.textContent = 'User balance: $' + fmt(state.editingBaseBalance) + ' → $' + fmt(newBal) +
+    (r.outcome === 'even' ? ' (no change)' : '');
+}
+
+$('umTradeResult')?.addEventListener('input', updateTradePL);
+
+function setupTradeCard(trade) {
+  state.editingTrade = trade || null;
+  const card = $('tradePL');
+  const modal = $('userModal').querySelector('.modal');
+
+  if (!trade) {
+    card.classList.remove('active');
+    modal.classList.remove('trade-mode'); // show all fields
+    return;
+  }
+
+  card.classList.add('active');
+  modal.classList.add('trade-mode'); // hide the standard fields
+
+  $('tpTag').textContent = (trade.trade_type || '') + ' · ' + (trade.pair || '') + ' · ' + (trade.action || '');
+  $('tpStake').textContent = '$' + fmt(trade.amount);
+  $('umTradeResult').value = '';
+  $('tpWarn').classList.toggle('active', getSettledTrades().has(String(trade.id)));
+  updateTradePL();
+}
+
+async function editUser(id, tradeId) {
+  showLoader();
+  try {
+    const data = await api('/admin/user/' + id);
+    const u = data.user;
+    state.editingUserId = id;
+    state.editingBaseBalance = Number(u.balance || 0);
+    $('userModalTitle').textContent = 'Edit — ' + (u.full_name || 'User');
+    $('umName').value = u.full_name || '';
+    $('umPhone').value = '';
+    $('umBalance').value = u.balance || 0;
+    $('umTrade').value = u.total_trade || 0;
+    $('umAssets').value = u.assets || 0;
+    $('umActive').value = u.active_assets || 0;
+    $('umBtc').value = u.btc_balance || 0;
+    $('umEth').value = u.eth_balance || 0;
+    $('umUsdt').value = u.usdt_balance || 0;
+    $('umSuspended').value = u.is_suspended ? 'true' : 'false';
+    $('umTxnType').value = 'Deposit';
+    MONEY_FIELDS.forEach(([fid]) => $(fid).classList.remove('invalid'));
+
+    const trade = tradeId ? state.trades.find(t => String(t.id) === String(tradeId)) : null;
+    setupTradeCard(trade);
+    if (trade) $('umTxnType').value = (trade.trade_type === 'Forex' ? 'Forex' : 'Crypto') + ' Profit';
+
+    openModal('userModal');
+  } catch (err) {
+    toast('error', 'Failed to load user: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+async function saveUser() {
+  if (!state.editingUserId) return;
+
+  // Trade result (only when Edit was opened from a trade)
+  const tr = readTradeResult();
+  if (!tr.valid) {
+    $('umTradeResult').classList.add('invalid'); $('umTradeResult').focus();
+    toast('error', 'Result amount: enter a valid number (no commas).');
+    return;
+  }
+
+  const vals = readMoneyFields();
+  if (!vals) return;
+  const payload = {
+    full_name: $('umName').value.trim(),
+    txn_type: $('umTxnType').value,
+    phone: $('umPhone').value.trim(),
+    balance: vals.umBalance,
+    total_trade: vals.umTrade,
+    assets: vals.umAssets,
+    active_assets: vals.umActive,
+    btc_balance: vals.umBtc,
+    eth_balance: vals.umEth,
+    usdt_balance: vals.umUsdt,
+    is_suspended: $('umSuspended').value === 'true'
+  };
+
+  const applyingResult = !!(state.editingTrade && !tr.empty);
+  if (applyingResult) {
+    payload.trade_id = state.editingTrade.id;
+    payload.trade_amount = tr.stake;
+    payload.trade_result_amount = tr.result;
+    payload.profit_loss = tr.diff;               // positive = profit, negative = loss
+    payload.trade_outcome = tr.outcome;          // 'profit' | 'loss' | 'even'
+    if (tr.outcome !== 'even') {
+      const word = tr.outcome === 'profit' ? 'profit of +$' : 'loss of -$';
+      const ok = await askConfirm(
+        'Apply trade result?',
+        'This records a ' + word + fmt(Math.abs(tr.diff)) + ' and sets the user balance to $' + fmt(vals.umBalance) + '.',
+        tr.outcome === 'profit' ? 'success' : 'danger',
+        'Apply'
+      );
+      if (!ok) return;
+    }
+  }
+
+  showLoader();
+  try {
+    await api('/admin/user/' + state.editingUserId, { method:'PUT', body: JSON.stringify(payload) });
+    if (applyingResult) markTradeSettled(state.editingTrade.id);
+    closeModal('userModal');
+    toast('success', applyingResult ? 'Trade result applied.' : 'User updated successfully.');
+    state.editingTrade = null;
+    if (currentSection() === 'trades') loadTrades(); else loadUsers();
+  } catch (err) {
+    toast('error', err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+/* =============================================================
+   DEPOSITS
+============================================================= */
+document.querySelectorAll('[data-dfilter]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-dfilter]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.depositFilter = b.dataset.dfilter;
+  renderDeposits();
+}));
+
+async function loadDeposits() {
+  showLoader();
+  try {
+    const data = await api('/admin/deposits');
+    state.deposits = data.deposits || [];
+    renderDeposits();
+    updateBadges();
+  } catch (err) {
+    toast('error', 'Failed to load deposits: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+function filteredDeposits() {
+  const f = state.depositFilter;
+  return state.deposits.filter(d => f === 'all' || d.status === f);
+}
+
+function renderDeposits() {
+  const list = filteredDeposits();
+  const tbody = $('depositsTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><p>No deposits.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(d => `
+    <tr>
+      <td>${userCell(d.users?.full_name, d.users?.email)}</td>
+      <td><b>$${fmt(d.amount)}</b></td>
+      <td>${esc(d.payment_method || '—')}</td>
+      <td>${d.receipt_url ? `<button class="btn-sm btn-view" onclick="viewImg('${esc(d.receipt_url)}')">View</button>` : '—'}</td>
+      <td><span class="pill ${String(d.status).toLowerCase()}">${esc(d.status)}</span></td>
+      <td class="mono">${fmtDate(d.created_at)}</td>
+      <td class="action-btns">
+        ${d.status === 'Pending' ? `
+          <button class="btn-sm btn-approve" onclick="approveDeposit('${d.id}')">Approve</button>
+          <button class="btn-sm btn-reject" onclick="rejectDeposit('${d.id}')">Reject</button>` : '—'}
+      </td>
+    </tr>`).join('');
+}
+function exportDeposits() {
+  exportCsv('deposits', [['Name','Email','Amount','Method','Status','Date'],
+    ...filteredDeposits().map(d => [d.users?.full_name, d.users?.email, d.amount, d.payment_method, d.status, d.created_at])]);
+}
+
+async function approveDeposit(id) {
+  if (!(await askConfirm('Approve deposit?', 'The user will be credited immediately.', 'success', 'Approve'))) return;
+  showLoader();
+  try {
+    await api('/admin/deposits/' + id + '/approve', { method:'PUT' });
+    toast('success', 'Deposit approved.');
+    loadDeposits();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+async function rejectDeposit(id) {
+  if (!(await askConfirm('Reject deposit?', 'This deposit request will be marked as rejected.', 'danger', 'Reject'))) return;
+  showLoader();
+  try {
+    await api('/admin/deposits/' + id + '/reject', { method:'PUT' });
+    toast('success', 'Deposit rejected.');
+    loadDeposits();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+
+/* =============================================================
+   WITHDRAWALS
+============================================================= */
+document.querySelectorAll('[data-wfilter]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-wfilter]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.withdrawalFilter = b.dataset.wfilter;
+  renderWithdrawals();
+}));
+
+async function loadWithdrawals() {
+  showLoader();
+  try {
+    const data = await api('/admin/withdrawals');
+    state.withdrawals = data.withdrawals || [];
+    renderWithdrawals();
+    updateBadges();
+  } catch (err) {
+    toast('error', 'Failed to load withdrawals: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+function filteredWithdrawals() {
+  const f = state.withdrawalFilter;
+  return state.withdrawals.filter(w => f === 'all' || w.status === f);
+}
+
+function renderWithdrawals() {
+  const list = filteredWithdrawals();
+  const tbody = $('withdrawalsTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><p>No withdrawals.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(w => `
+    <tr>
+      <td>${userCell(w.users?.full_name, w.users?.email)}</td>
+      <td><b>$${fmt(w.amount)}</b></td>
+      <td>${esc(w.method || '—')}</td>
+      <td class="mono" style="max-width:220px;word-break:break-all">${esc(w.wallet_address || '—')}</td>
+      <td><span class="pill ${String(w.status).toLowerCase()}">${esc(w.status)}</span></td>
+      <td class="mono">${fmtDate(w.created_at)}</td>
+      <td class="action-btns">
+        ${w.status === 'Pending' ? `
+          <button class="btn-sm btn-approve" onclick="approveWithdrawal('${w.id}')">Approve</button>
+          <button class="btn-sm btn-reject" onclick="rejectWithdrawal('${w.id}')">Reject</button>` : ''}
+        <button class="btn-sm btn-delete" onclick="deleteWithdrawal('${w.id}')">Del</button>
+      </td>
+    </tr>`).join('');
+}
+function exportWithdrawals() {
+  exportCsv('withdrawals', [['Name','Email','Amount','Method','Wallet','Status','Date'],
+    ...filteredWithdrawals().map(w => [w.users?.full_name, w.users?.email, w.amount, w.method, w.wallet_address, w.status, w.created_at])]);
+}
+
+async function approveWithdrawal(id) {
+  if (!(await askConfirm('Approve withdrawal?', 'The amount will be deducted from the user balance.', 'success', 'Approve'))) return;
+  showLoader();
+  try {
+    await api('/admin/withdrawals/' + id + '/approve', { method:'PUT' });
+    toast('success', 'Withdrawal approved.');
+    loadWithdrawals();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+async function rejectWithdrawal(id) {
+  if (!(await askConfirm('Reject withdrawal?', 'This withdrawal request will be marked as rejected.', 'danger', 'Reject'))) return;
+  showLoader();
+  try {
+    await api('/admin/withdrawals/' + id + '/reject', { method:'PUT' });
+    toast('success', 'Withdrawal rejected.');
+    loadWithdrawals();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+async function deleteWithdrawal(id) {
+  if (!(await askConfirm('Delete record?', 'This withdrawal record will be deleted permanently.', 'danger', 'Delete'))) return;
+  showLoader();
+  try {
+    await api('/admin/withdrawals/' + id, { method:'DELETE' });
+    toast('success', 'Withdrawal deleted.');
+    loadWithdrawals();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+
+/* =============================================================
+   KYC
+============================================================= */
+document.querySelectorAll('[data-kfilter]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-kfilter]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.kycFilter = b.dataset.kfilter;
+  renderKyc();
+}));
+
+async function loadKyc() {
+  showLoader();
+  try {
+    const data = await api('/admin/kyc');
+    state.kyc = data.requests || [];
+    renderKyc();
+    updateBadges();
+  } catch (err) {
+    toast('error', 'Failed to load KYC: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+function renderKyc() {
+  const f = state.kycFilter;
+  const list = state.kyc.filter(k => f === 'all' || k.status === f);
+  const tbody = $('kycTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><p>No KYC requests.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(k => `
+    <tr>
+      <td>${userCell(k.full_name, k.email)}</td>
+      <td>
+        <div style="font-size:13px;font-weight:600">${esc(k.document_type || '—')}</div>
+        <div class="mono" style="margin-bottom: 8px;">${esc(k.document_number || '')}</div>
+
+        <div style="display: flex; gap: 10px;">
+            ${k.front_image_url ? `
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; color: #a0a0aa; margin-bottom: 4px;">FRONT</div>
+                    <img class="kyc-img" src="${esc(k.front_image_url)}" onclick="viewImg('${esc(k.front_image_url)}')" style="max-width: 80px; height: auto; border-radius: 4px; cursor: pointer;">
+                </div>
+            ` : ''}
+
+            ${k.back_image_url ? `
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; color: #a0a0aa; margin-bottom: 4px;">BACK</div>
+                    <img class="kyc-img" src="${esc(k.back_image_url)}" onclick="viewImg('${esc(k.back_image_url)}')" style="max-width: 80px; height: auto; border-radius: 4px; cursor: pointer;">
+                </div>
+            ` : ''}
+        </div>
+      </td>
+      <td><span class="pill ${String(k.status).toLowerCase()}">${esc(k.status)}</span></td>
+      <td class="mono">${fmtDate(k.created_at)}</td>
+      <td class="action-btns">
+        ${k.status === 'Pending' ? `
+          <button class="btn-sm btn-approve" onclick="approveKyc('${k.id}')">Approve</button>
+          <button class="btn-sm btn-reject" onclick="openKycReject('${k.id}')">Reject</button>` : '—'}
+      </td>
+    </tr>`).join('');
+}
+
+async function approveKyc(id) {
+  if (!(await askConfirm('Approve KYC?', 'The user will be marked as verified.', 'success', 'Approve'))) return;
+  showLoader();
+  try {
+    await api('/admin/kyc/' + id + '/approve', { method:'PUT' });
+    toast('success', 'KYC approved.');
+    loadKyc();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+function openKycReject(id) {
+  state.rejectKycId = id;
+  $('kycReason').value = '';
+  openModal('kycModal');
+}
+async function confirmKycReject() {
+  if (!state.rejectKycId) return;
+  const reason = $('kycReason').value.trim() || 'Document unclear or invalid.';
+  showLoader();
+  try {
+    await api('/admin/kyc/' + state.rejectKycId + '/reject', {
+      method:'PUT', body: JSON.stringify({ rejection_reason: reason })
+    });
+    closeModal('kycModal');
+    toast('success', 'KYC rejected.');
+    loadKyc();
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+
+/* =============================================================
+   TRADES  (Crypto + Forex only — live package trades are hidden)
+============================================================= */
+document.querySelectorAll('[data-tfilter]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-tfilter]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.tradeFilter = b.dataset.tfilter;
+  renderTrades();
+}));
+
+async function loadTrades(silent) {
+  if (!silent) showLoader();
+  try {
+    const data = await api('/admin/trades');
+    state.trades = onlyMarketTrades(data.trades);
+    const ids = new Set(state.trades.map(t => t.id));
+    if (state.knownTradeIds) {
+      const fresh = state.trades.filter(t => !state.knownTradeIds.has(t.id));
+      if (fresh.length) toast('info', fresh.length + ' new trade' + (fresh.length > 1 ? 's' : '') + ' placed');
+    }
+    state.knownTradeIds = ids;
+    renderTrades();
+    if (currentSection() === 'trades') markTradesSeen(state.trades);
+  } catch (err) {
+    if (!silent) toast('error', 'Failed to load trades: ' + err.message);
+  } finally { if (!silent) hideLoader(); }
+}
+
+function filteredTrades() {
+  const f = state.tradeFilter;
+  return state.trades.filter(t => f === 'all' || t.trade_type === f);
+}
+
+function renderTrades() {
+  const list = filteredTrades();
+  const tbody = $('tradesTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty"><p>No trades yet.</p></div></td></tr>';
+    return;
+  }
+  const settled = getSettledTrades();
+  tbody.innerHTML = list.map(t => `
+    <tr>
+      <td>${userCell(t.user?.full_name, t.user?.email)}</td>
+      <td>${esc(t.trade_type)}</td>
+      <td><b>${esc(t.pair)}</b></td>
+      <td><span class="pill ${t.action === 'BUY' ? 'approved' : 'rejected'}">${esc(t.action)}</span></td>
+      <td>${esc(t.lot_size)}</td>
+      <td>${t.stop_loss ? esc(t.stop_loss) : '<span class="mono">None</span>'}</td>
+      <td><b>$${fmt(t.amount)}</b></td>
+      <td class="mono">${fmtDate(t.created_at)}</td>
+      <td class="action-btns">
+        <button class="btn-sm btn-view" onclick="editUser('${esc(t.user_id)}','${esc(t.id)}')">Edit</button>
+        ${settled.has(String(t.id)) ? '<span class="pill approved">Settled</span>' : ''}
+      </td>
+    </tr>`).join('');
+}
+function exportTrades() {
+  exportCsv('trades', [['Name','Email','Market','Pair','Side','Lots','Stop Loss','Amount','Date'],
+    ...filteredTrades().map(t => [t.user?.full_name, t.user?.email, t.trade_type, t.pair, t.action, t.lot_size, t.stop_loss, t.amount, t.created_at])]);
+}
+
+setInterval(() => {
+  if (currentSection() === 'trades') loadTrades(true);
+}, 10000);
+
+/* =============================================================
+   SUPPORT
+============================================================= */
+async function loadSupportUsers() {
+  showLoader();
+  try {
+    const data = await api('/admin/support/users');
+    const users = data.users || [];
+    const wrap = $('supportUsers');
+
+    state.supportUnread = {};
+    users.forEach(u => { const c = readUnread(u); if (c > 0) state.supportUnread[u.id] = c; });
+    updateBadges();
+
+    if (!users.length) {
+      wrap.innerHTML = '<div class="empty"><p>No support conversations.</p></div>';
+      return;
+    }
+    wrap.innerHTML = users.map(u => {
+      const c = state.supportUserId === u.id ? 0 : readUnread(u);
+      return `
+      <div class="u-item ${state.supportUserId === u.id ? 'active' : ''}" onclick="openThread('${esc(u.id)}','${esc(u.full_name||'')}','${esc(u.email||'')}')">
+        ${avatar(u.full_name, 'sm')}
+        <div class="u-info">
+          <div class="name">${esc(u.full_name || 'Unknown')}</div>
+          <div class="email">${esc(u.email || '')}</div>
+        </div>
+        ${c > 0 ? `<span class="u-badge">${c > 99 ? '99+' : c}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    toast('error', 'Failed to load support users: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+async function openThread(userId, name, email) {
+  state.supportUserId = userId;
+  document.querySelectorAll('.u-item').forEach(el => el.classList.remove('active'));
+  [...document.querySelectorAll('.u-item')].forEach(el => {
+    if (el.textContent.includes(email)) {
+      el.classList.add('active');
+      el.querySelector('.u-badge')?.remove();
+    }
+  });
+
+  const thread = $('supportThread');
+  thread.innerHTML = `
+    <div class="thread-header"><div class="cell-user">${avatar(name, 'sm')}<div><h4>${esc(name)}</h4><p>${esc(email)}</p></div></div></div>
+    <div class="thread-msgs" id="threadMsgs"><div class="empty"><p>Loading…</p></div></div>
+    <div class="thread-input">
+      <input id="threadInput" placeholder="Type a message…" onkeypress="if(event.key==='Enter')sendThreadMsg()">
+      <button onclick="sendThreadMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    </div>`;
+
+  await fetchThread(userId);
+  try {
+    await api('/admin/support/messages/' + userId + '/read', { method:'PUT' });
+  } catch {}
+  delete state.supportUnread[userId];
+  updateBadges();
+
+  if (state.supportThreadInterval) clearInterval(state.supportThreadInterval);
+  state.supportThreadInterval = setInterval(() => fetchThread(userId), 6000);
+}
+
+async function fetchThread(userId) {
+  try {
+    const data = await api('/admin/support/messages/' + userId);
+    const msgs = data.messages || [];
+    const container = $('threadMsgs');
+    if (!container) return;
+    if (!msgs.length) {
+      container.innerHTML = '<div class="empty"><p>No messages yet.</p></div>';
+      return;
+    }
+    container.innerHTML = msgs.map(m => `
+      <div class="chat-bubble ${m.sender === 'admin' ? 'admin' : 'user'}">
+        ${esc(m.message).replace(/\n/g,'<br>')}
+        <span class="time">${fmtDate(m.created_at)}</span>
+      </div>`).join('');
+    container.scrollTop = container.scrollHeight;
+
+    const last = msgs[msgs.length - 1];
+    if (last && last.sender !== 'admin' && state.supportUserId === userId && currentSection() === 'support') {
+      const key = userId + ':' + (last.id || last.created_at);
+      if (state.lastMarkedRead !== key) {
+        state.lastMarkedRead = key;
+        api('/admin/support/messages/' + userId + '/read', { method:'PUT' }).then(updateBadges).catch(() => {});
+      }
+    }
+  } catch (err) { /* silent */ }
+}
+
+async function sendThreadMsg() {
+  const input = $('threadInput');
+  const msg = input.value.trim();
+  if (!msg || !state.supportUserId) return;
+  input.value = '';
+  try {
+    await api('/admin/support/messages', {
+      method:'POST',
+      body: JSON.stringify({ user_id: state.supportUserId, message: msg })
+    });
+    fetchThread(state.supportUserId);
+  } catch (err) { toast('error', err.message); }
+}
+
+/* =============================================================
+   SETTINGS
+============================================================= */
+async function loadSettings() {
+  showLoader();
+  try {
+    const data = await api('/settings/deposit-addresses');
+    const a = data.addresses || {};
+    $('setBtc').value = a.btc_deposit_address || '';
+    $('setEth').value = a.eth_deposit_address || '';
+    $('setUsdt').value = a.usdt_deposit_address || '';
+    $('setTrx').value = a.trx_deposit_address || '';
+    $('setSol').value = a.sol_deposit_address || '';
+  } catch (err) {
+    toast('error', 'Failed to load settings: ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+async function saveSettings() {
+  const payload = {
+    btc_deposit_address: $('setBtc').value.trim(),
+    eth_deposit_address: $('setEth').value.trim(),
+    usdt_deposit_address: $('setUsdt').value.trim(),
+    trx_deposit_address: $('setTrx').value.trim(),
+    sol_deposit_address: $('setSol').value.trim()
+  };
+  showLoader();
+  try {
+    await api('/admin/settings/deposit-addresses', { method:'PUT', body: JSON.stringify(payload) });
+    toast('success', 'Settings saved.');
+  } catch (err) {
+    toast('error', err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+/* ---------- CHANGE PASSWORD ---------- */
+function togglePw(id, btn) {
+  const i = $(id), show = i.type === 'password';
+  i.type = show ? 'text' : 'password';
+  btn.textContent = show ? 'Hide' : 'Show';
+}
+
+$('pwNew')?.addEventListener('input', () => {
+  const v = $('pwNew').value;
+  let s = 0;
+  if (v.length >= 8) s++;
+  if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+  if (/\d/.test(v)) s++;
+  if (/[^A-Za-z0-9]/.test(v)) s++;
+  const cols = ['#f23645', '#f59e0b', '#d4d4d8', '#10b981'];
+  const names = ['Weak', 'Fair', 'Good', 'Strong'];
+  const bar = $('pwBar');
+  bar.style.width = v ? (s * 25) + '%' : '0';
+  bar.style.background = cols[Math.max(0, s - 1)];
+  $('pwHint').textContent = v ? 'Strength: ' + names[Math.max(0, s - 1)] : 'Use 8+ characters with letters, numbers and symbols.';
+});
+
+async function changePassword() {
+  const cur = $('pwCurrent').value, nw = $('pwNew').value, cf = $('pwConfirm').value;
+  if (!cur || !nw || !cf) return toast('error', 'Please fill in all password fields.');
+  if (nw.length < 8) return toast('error', 'New password must be at least 8 characters.');
+  if (nw === cur) return toast('error', 'New password must be different from the current one.');
+  if (nw !== cf) return toast('error', 'New passwords do not match.');
+  if (!(await askConfirm('Change password?', 'You will use the new password the next time you sign in.', 'primary', 'Update'))) return;
+  showLoader();
+  try {
+    await api('/admin/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ admin_id: admin.id, email: admin.email, current_password: cur, new_password: nw })
+    });
+    ['pwCurrent', 'pwNew', 'pwConfirm'].forEach(id => $(id).value = '');
+    $('pwBar').style.width = '0';
+    $('pwHint').textContent = 'Use 8+ characters with letters, numbers and symbols.';
+    toast('success', 'Password updated successfully.');
+  } catch (err) { toast('error', err.message); }
+  finally { hideLoader(); }
+}
+
+
+/* =============================================================
+   IMAGE VIEWER
+============================================================= */
+function viewImg(url) {
+  $('imgModalSrc').src = url;
+  openModal('imgModal');
+}
+</script>
+</body>
+</html>
