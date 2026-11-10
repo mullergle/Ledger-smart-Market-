@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -776,6 +777,14 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 <div class="lt-pct" id="ltPct">0.00%</div>
             </div>
 
+            <!-- ✅ NEW: SETTLING OVERLAY -->
+            <div id="ltSettlingOverlay" style="display: none; position: absolute; inset: 0; background: rgba(10,10,10,0.85); z-index: 10; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+                <div style="width: 50px; height: 50px; border: 4px solid rgba(240,185,11,0.2); border-top-color: var(--primary-bright); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--primary-bright); margin-bottom: 5px;">Trade Expired</div>
+                <div style="font-size: 14px; color: var(--text-gray);">Settling P&L and updating balance...</div>
+            </div>
+            <!-- ✅ END SETTLING OVERLAY -->
+
             <div class="lt-chart-wrap"><canvas id="ltCanvas"></canvas></div>
             <div class="lt-chart-meta"><span id="ltChartMeta">Last 90 min · BTC/USD</span><span id="ltChartPrice">--</span></div>
 
@@ -799,7 +808,6 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 <div><small>Ends</small><span id="ltEnds">-</span></div>
             </div>
 
-            <!-- ============ CLOSE TRADE BUTTON ============ -->
             <div class="lt-close-wrap" id="ltCloseWrap">
                 <button class="lt-close-btn" id="ltCloseBtn" onclick="confirmCloseTrade()">
                     <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -813,13 +821,33 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
 
         <div class="chart-wrapper" id="mainChart"><div class="tradingview-widget-container"><div id="tradingview_chart"></div></div></div>
 
-        <div class="stat-card teal-bg">
-            <div class="stat-title" data-i18n="title_balance">Balance</div>
-            <div class="stat-value" translate="no" id="statBalance">$0.00</div>
-            <div style="position:absolute; top:20px; right:20px; opacity:0.15;">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="#f0b90b"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+        <!-- ============ MT5 STYLE CARDS ============ -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card teal-bg" style="margin-bottom: 0; padding: 16px 14px;">
+                <div class="stat-title" style="font-size: 13px;">Balance</div>
+                <div class="stat-value" style="font-size: 22px;" translate="no" id="statBalance">$0.00</div>
+            </div>
+            <div class="stat-card" style="margin-bottom: 0; padding: 16px 14px; border-left: 4px solid var(--primary-bright);">
+                <div class="stat-title" style="font-size: 13px; color: var(--primary-bright);">Equity</div>
+                <div class="stat-value" style="font-size: 22px;" translate="no" id="statEquity">$0.00</div>
+            </div>
+            <div class="stat-card" style="margin-bottom: 0; padding: 16px 14px;">
+                <div class="stat-title" style="font-size: 13px;">Free Margin</div>
+                <div class="stat-value" style="font-size: 20px;" translate="no" id="statFreeMargin">$0.00</div>
+            </div>
+            <div class="stat-card" style="margin-bottom: 0; padding: 16px 14px;">
+                <div class="stat-title" style="font-size: 13px;">Used Margin</div>
+                <div class="stat-value" style="font-size: 20px;" translate="no" id="statUsedMargin">$0.00</div>
             </div>
         </div>
+
+        <div class="stat-card" style="padding: 16px 18px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="stat-title" style="margin-bottom: 0; font-size: 14px;">Margin Level</div>
+                <div class="stat-value" style="font-size: 20px; color: var(--primary-teal);" translate="no" id="statMarginLevel">0.00%</div>
+            </div>
+        </div>
+        <!-- ============ END MT5 CARDS ============ -->
 
         <div class="stat-card red-bg">
             <div class="stat-title" data-i18n="title_pending">Pending Deposit</div>
@@ -934,10 +962,10 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             <button class="pkg-btn" onclick="selectPackage('XAU/USD', 1000, 4/24, 470, 'Au', 'Gold · Commodities', this)">Enter Position</button>
         </div>
 
-        <!-- PACKAGE 4: XAG/USD -->
+        <!-- PACKAGE 4: US30 -->
         <div class="package-card">
             <div class="pkg-header">
-                <div class="pkg-pair">XAG/USD <span>Commodities</span></div>
+                <div class="pkg-pair">US30 <span>Indices</span></div>
                 <div class="pkg-min">Minimum<strong><span class="currency-symbol">$</span>5,000</strong></div>
             </div>
             <div class="pkg-details">
@@ -950,7 +978,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                     <span class="pkg-detail-value">10 Hours</span>
                 </div>
             </div>
-            <button class="pkg-btn" onclick="selectPackage('XAG/USD', 5000, 10/24, 1000, 'Ag', 'Silver · Commodities', this)">Enter Position</button>
+            <button class="pkg-btn" onclick="selectPackage('US30', 5000, 10/24, 1000, '🏛️', 'Dow Jones · Indices', this)">Enter Position</button>
         </div>
 
         <div class="dashboard-history-card" id="history">
@@ -1014,11 +1042,11 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         <div class="modal-content">
             <button class="close-modal" onclick="closeModals()">&times;</button>
             <h2>Start Live Trade</h2>
-            <p style="text-align:center;color:var(--text-gray);margin-bottom:20px;font-size:14px;">You are about to start a live trade. The package amount will be deducted from your balance immediately.</p>
+            <p style="text-align:center;color:var(--text-gray);margin-bottom:20px;font-size:14px;">You are about to start a live trade. The margin amount will be locked immediately.</p>
             <div class="modal-detail-row"><span>Asset Pair</span><span id="pkgModalName">-</span></div>
             <div class="modal-detail-row"><span>Duration</span><span id="pkgModalDays">-</span></div>
             <div class="modal-detail-row"><span>Target Yield</span><span id="pkgModalPips">-</span></div>
-            <div class="modal-detail-row"><span>Amount to deduct</span><span id="pkgModalPrice" style="color:var(--primary-bright);">-</span></div>
+            <div class="modal-detail-row"><span>Amount to lock</span><span id="pkgModalPrice" style="color:var(--primary-bright);">-</span></div>
             <p style="text-align:center;color:#808080;font-size:11px;margin-top:14px;">Trading involves risk. Your position value can go up or down.</p>
             <button class="btn-buy" id="pkgConfirmBtn" style="margin-top:18px;" onclick="confirmPackage(this)">CONFIRM &amp; START LIVE TRADE</button>
             <button class="btn-sell" style="background:var(--input-bg);border:1px solid var(--border-color);" onclick="closeModals()">CANCEL</button>
@@ -1089,7 +1117,11 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
 
     <audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
-    
+    <!-- ✅ NEW: SOUND EFFECTS -->
+    <audio id="clickSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    <!-- Using a sharper "swish" sound that closely matches MT5 ok.wav -->
+    <audio id="successSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+
     <script>
     (function () {
       var splash = document.getElementById('dashSplash');
@@ -1123,6 +1155,59 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         const API_BASE_URL = 'https://apexline-market.onrender.com';
         const LEVERAGE_MULTIPLIER = 100; // Base leverage for most assets
 
+        // ✅ NEW: Frontend Market Hours Checker
+        function isMarketOpenFrontend(pair) {
+            if (pair !== 'EUR/USD' && pair !== 'XAU/USD') return true;
+            const now = new Date();
+            const day = now.getUTCDay();
+            const hours = now.getUTCHours();
+            if (day === 5 && hours >= 22) return false;
+            if (day === 6) return false;
+            if (day === 0 && hours < 22) return false;
+            return true;
+        }
+
+        // Check market status every minute and update UI
+        setInterval(() => {
+            const eurBtn = document.querySelector('button[onclick*="EUR/USD"]');
+            const goldBtn = document.querySelector('button[onclick*="XAU/USD"]');
+            const eurOpen = isMarketOpenFrontend('EUR/USD');
+            const goldOpen = isMarketOpenFrontend('XAU/USD');
+
+            if (eurBtn) {
+                if (!eurOpen && eurBtn.innerText === 'ENTER POSITION') {
+                    eurBtn.innerHTML = 'MARKET CLOSED';
+                    eurBtn.style.background = '#333';
+                    eurBtn.style.color = '#888';
+                    eurBtn.disabled = true;
+                    eurBtn.onclick = (e) => { e.preventDefault(); showToast('error', 'EUR/USD is closed for the weekend.'); };
+                } else if (eurOpen && eurBtn.innerText === 'MARKET CLOSED') {
+                    eurBtn.innerHTML = 'Enter Position';
+                    eurBtn.style.background = '';
+                    eurBtn.style.color = '';
+                    eurBtn.disabled = false;
+                    eurBtn.onclick = function() { selectPackage('EUR/USD', 200, 1/24, 100, 'EUR', 'Euro · Forex Trade', this); };
+                }
+            }
+
+            if (goldBtn) {
+                if (!goldOpen && goldBtn.innerText === 'ENTER POSITION') {
+                    goldBtn.innerHTML = 'MARKET CLOSED';
+                    goldBtn.style.background = '#333';
+                    goldBtn.style.color = '#888';
+                    goldBtn.disabled = true;
+                    goldBtn.onclick = (e) => { e.preventDefault(); showToast('error', 'Gold is closed for the weekend.'); };
+                } else if (goldOpen && goldBtn.innerText === 'MARKET CLOSED') {
+                    goldBtn.innerHTML = 'Enter Position';
+                    goldBtn.style.background = '';
+                    goldBtn.style.color = '';
+                    goldBtn.disabled = false;
+                    goldBtn.onclick = function() { selectPackage('XAU/USD', 1000, 4/24, 470, 'Au', 'Gold · Commodities', this); };
+                }
+            }
+        }, 1000);
+
+
         const userStr = localStorage.getItem('nexoraUser');
         if (!userStr) { window.location.replace('index.html'); throw new Error('Not authenticated'); }
 
@@ -1138,8 +1223,17 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         let kycVerified = null;
 
         const PROFILE_DONE_KEY = `apexProfileDone_${currentUser.id}`;
-        const MONEY_IDS = ['statBalance', 'statPendingDeposit', 'statTotalDeposit', 'statTotalWithdrawal', 'statReferralBonus'];
+        const MONEY_IDS = ['statBalance', 'statPendingDeposit', 'statTotalDeposit', 'statTotalWithdrawal', 'statReferralBonus', 'statEquity', 'statFreeMargin', 'statUsedMargin', 'statMarginLevel'];
         const CURRENCY_PREFIX_RE = /^(C\$|A\$|\$|£|€|¥|₦|₹|R\$|₽|₺|₩|₪|₴|₱|฿|₫|₪)/;
+
+        // ✅ NEW: Play Sharp Sound
+        function playSuccessSound() {
+            const successSound = document.getElementById('successSound');
+            if (successSound) { 
+                successSound.currentTime = 0; 
+                successSound.play().catch(()=>{}); 
+            }
+        }
 
         function getCurrencyData() {
             if (currentUser && currentUser.currency && currentUser.currency.symbol) {
@@ -1361,7 +1455,8 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
 
         function describeTxn(txn) {
             const sym = getNotifSym();
-            const amt = `${sym}${txn.amount_display || parseFloat(txn.amount || 0).toFixed(2)}`;
+            // ✅ FIXED: Strip commas before parsing to prevent float truncation
+            const amt = `${sym}${txn.amount_display || parseFloat(String(txn.amount || 0).replace(/,/g, '')).toFixed(2)}`;
             const status = (txn.status || '').toLowerCase();
             switch (txn.type) {
                 case 'Deposit':
@@ -1384,6 +1479,9 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                     if (status === 'rejected') return { kind: 'alert', title: `${label} failed`, text: `Your ${label.toLowerCase()} of ${amt} could not be completed.` };
                     return { kind: 'trade', title: `${label} placed`, text: `Your ${label.toLowerCase()} of ${amt} was placed successfully.` };
                 }
+                case 'Trade Result':
+                    const isWin = (txn.pnl || 0) >= 0;
+                    return { kind: isWin ? 'bonus' : 'alert', title: `Trade ${isWin ? 'Won' : 'Lost'}`, text: `Trade closed with ${isWin ? '+' : ''}${amt}.` };
                 case 'Referral Bonus':
                 case 'Bonus':
                     return { kind: 'bonus', title: 'Bonus received', text: `You received a bonus of ${amt}.` };
@@ -1538,7 +1636,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
 
             setInterval(fetchUserData, 30000);
             setInterval(fetchUserTrades, 30000);
-            setInterval(loadActiveTrade, 60000);
+            setInterval(loadActiveTrade, 5000);
             window.addEventListener('resize', () => { if (liveTrade) drawLtChart(); });
         });
 
@@ -1673,121 +1771,37 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                         const kycData = await kycRes.json();
                         notifSources.kyc = (kycRes.ok && kycData.success && kycData.kyc && kycData.kyc.status) ? kycData.kyc : null;
                     } catch (kycErr) {}
+
                     let totalEarned = 0;
-                    let totalPL = 0;
                     try {
                         const txRes = await fetch(`${API_BASE_URL}/transactions/${currentUser.id}`);
                         const txData = await txRes.json();
                         if (txData.success && txData.transactions) {
                             const referralTypes = ['referral bonus', 'referral commission', 'bonus'];
-                            
-                            // Sort transactions chronologically (oldest to newest) to process them in order
-                            const sortedTxns = [...txData.transactions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                            
-                            // We will use this to match Copy Out stakes to Copy In returns
-                            let activeCopyStakes = []; 
-                            let activeCryptoStakes = [];
-                            let activeForexStakes = [];
-
-                            sortedTxns.forEach(txn => {
-                                const type = txn.type || '';
-                                const typeLower = type.toLowerCase();
-                                const amount = parseFloat(txn.amount || 0);
-                                const desc = txn.description || '';
-
-                                // 1. Calculate Referral Bonus
-                                if (referralTypes.some(t => typeLower.includes(t)) && txn.status === 'Approved') {
-                                    totalEarned += amount;
-                                }
-
-                                // 2. Calculate Total P&L (Only count Approved or Closed trades)
-                                if (txn.status === 'Approved' || txn.status === 'Completed' || txn.status === 'Closed') {
-                                    
-                                    // --- LIVE TRADES ---
-                                    // Backend sends the pure profit on close.
-                                    if (type === 'Profit') {
-                                        totalPL += amount;
-                                    }
-                                    
-                                    // --- COPY TRADES ---
-                                    else if (type === 'Copy Out') {
-                                        activeCopyStakes.push(amount);
-                                    } 
-                                    else if (type === 'Copy In') {
-                                        if (activeCopyStakes.length > 0) {
-                                            const stake = activeCopyStakes.shift();
-                                            const profit = amount - stake; // Isolate profit
-                                            if (Math.abs(profit) > 0.01) totalPL += profit;
-                                        } else {
-                                            const match = desc.match(/P\/L:\s*([+-]?\$?[\d,]+(\.\d+)?)/i);
-                                            if (match) {
-                                                const parsedProfit = parseFloat(match[1].replace(/[^0-9.-]+/g, ""));
-                                                if (!isNaN(parsedProfit) && Math.abs(parsedProfit) > 0.01) totalPL += parsedProfit;
-                                            }
-                                        }
-                                    }
-
-                                    // --- CRYPTO TRADES ---
-                                    else if (type === 'Crypto') {
-                                        // Check if this is a return payout (which means the trade closed)
-                                        if (desc.toLowerCase().includes('returned') || desc.toLowerCase().includes('profit') || desc.toLowerCase().includes('loss')) {
-                                            if (activeCryptoStakes.length > 0) {
-                                                const stake = activeCryptoStakes.shift();
-                                                const profit = amount - stake; // e.g., 400 - 100 = 300
-                                                if (Math.abs(profit) > 0.01) totalPL += profit;
-                                            } else {
-                                                const match = desc.match(/P\/L:\s*([+-]?\$?[\d,]+(\.\d+)?)/i);
-                                                if (match) {
-                                                    const parsedProfit = parseFloat(match[1].replace(/[^0-9.-]+/g, ""));
-                                                    if (!isNaN(parsedProfit) && Math.abs(parsedProfit) > 0.01) totalPL += parsedProfit;
-                                                }
-                                            }
-                                        } else {
-                                            // Normal stake (e.g., user just traded $100)
-                                            activeCryptoStakes.push(amount);
-                                        }
-                                    }
-
-                                    // --- FOREX TRADES ---
-                                    else if (type === 'Forex' || type === 'Trade') {
-                                        // Check if this is a return payout
-                                        if (desc.toLowerCase().includes('returned') || desc.toLowerCase().includes('profit') || desc.toLowerCase().includes('loss')) {
-                                            if (activeForexStakes.length > 0) {
-                                                const stake = activeForexStakes.shift();
-                                                const profit = amount - stake; // e.g., 400 - 100 = 300
-                                                if (Math.abs(profit) > 0.01) totalPL += profit;
-                                            } else {
-                                                const match = desc.match(/P\/L:\s*([+-]?\$?[\d,]+(\.\d+)?)/i);
-                                                if (match) {
-                                                    const parsedProfit = parseFloat(match[1].replace(/[^0-9.-]+/g, ""));
-                                                    if (!isNaN(parsedProfit) && Math.abs(parsedProfit) > 0.01) totalPL += parsedProfit;
-                                                }
-                                            }
-                                        } else {
-                                            // Normal stake
-                                            activeForexStakes.push(amount);
-                                        }
-                                    }
+                            txData.transactions.forEach(t => {
+                                const ty = (t.type || '').toLowerCase();
+                                if (t.status === 'Approved' && referralTypes.some(r => ty.includes(r))) {
+                                    totalEarned += Number(t.amount || 0);
                                 }
                             });
                         }
                     } catch (txError) {}
-                    
-                    // Update Referral Bonus UI
+
                     document.getElementById('statReferralBonus').innerText = `${getCurrencySymbol()}${totalEarned.toFixed(2)}`;
-                    
-                    // Update Total P&L UI
+
                     const plEl = document.getElementById('statTotalPL');
-                    if (plEl) {
+                    if (plEl && u.total_pnl != null) {
                         const sym = getCurrencySymbol();
-                        const convertedPL = convert(totalPL);
-                        
+                        // ✅ FIX: Ensure we parse the P&L as a number and handle negatives correctly
+                        const rawPnl = Number(u.total_pnl) || 0;
+                        const convertedPL = convert(rawPnl);
+
                         if (convertedPL > 0) {
                             plEl.innerText = `+${sym}${money(convertedPL)}`;
-                            plEl.style.color = '#ffffff'; // Keep white text as requested
+                            plEl.style.color = '#ffffff';
                         } else if (convertedPL < 0) {
                             plEl.innerText = `-${sym}${money(Math.abs(convertedPL))}`;
-                            plEl.style.color = '#ffffff'; // Keep white text as requested
+                            plEl.style.color = '#ffffff';
                         } else {
                             plEl.innerText = `${sym}0.00`;
                             plEl.style.color = '#ffffff';
@@ -1807,7 +1821,17 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 if (data.success && data.transactions) {
                     const transactions = data.transactions;
                     const TRADE_TYPES = new Set(['Trade', 'Crypto', 'Forex', 'Copy Out', 'Copy Trade']);
-                    document.getElementById('statTotalTrades').innerText = transactions.filter(t => TRADE_TYPES.has(t.type) && (t.status || '').toLowerCase() !== 'rejected').length;
+                    
+                    // ✅ PATCH START: Include active live trade in total count
+                    let totalTradesCount = transactions.filter(t => TRADE_TYPES.has(t.type) && (t.status || '').toLowerCase() !== 'rejected').length;
+                    
+                    // Check if there is a live package trade running in the browser's storage
+                    if (readLT()) {
+                        totalTradesCount += 1;
+                    }
+                    
+                    document.getElementById('statTotalTrades').innerText = totalTradesCount;
+                    // ✅ PATCH END
                     window.dashTxns = transactions;
                     notifSources.txns = transactions;
                     notifSources.txnsLoaded = true;
@@ -1820,9 +1844,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                     if (hasPending) { pendingEl.dataset.hasPending = "true"; pendingEl.innerText = `${currencySym}${pendingFormatted}`; pendingEl.style.color = 'var(--primary-bright)'; }
                     else { delete pendingEl.dataset.hasPending; pendingEl.innerText = `${currencySym}0.00`; pendingEl.style.color = 'white'; }
                     if (transactions.length === 0) { listContainer.innerHTML = `<div class="empty-mini">No trades yet. Your history will appear here.</div>`; return; }
-                    // ============ CREDIT ALL RETURNS ============
-                    const CREDIT_TYPES = new Set(['Deposit', 'Copy In', 'Bonus', 'Refund', 'Profit', 'Referral Bonus']);
-                    const DEBIT_TYPES  = new Set(['Withdrawal', 'Copy Out', 'Trade', 'Crypto', 'Forex']);
+                    
                     const copyTxns  = transactions.filter(t => t.type === 'Copy Out' || t.type === 'Copy In').slice(0, 3);
                     const otherTxns = transactions.filter(t => t.type !== 'Copy Out' && t.type !== 'Copy In').slice(0, 2);
                     const toRender  = [...copyTxns, ...otherTxns].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
@@ -1840,13 +1862,22 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                         else if (txn.type === 'Forex') { typeIconClass = 'trade'; typeLabel = 'Forex Trade'; }
                         else if (txn.type === 'Referral Bonus') { typeIconClass = 'deposit'; typeLabel = 'Referral Bonus'; }
                         else if (txn.type === 'Profit') { typeIconClass = 'deposit'; typeLabel = 'Crypto Profit'; }
+                        
                         let isCredit = true;
                         if (txn.type === 'Withdrawal' || txn.type === 'Copy Out' || txn.type === 'Trade' || txn.type === 'Crypto' || txn.type === 'Forex') {
                             isCredit = false;
                         }
+                        
+                        if (Number(txn.amount) < 0) {
+                            isCredit = false;
+                        }
+
                         const amountClass = isCredit ? 'positive' : 'negative';
                         const amountPrefix = isCredit ? '+' : '-';
-                        const amountDisplay = txn.amount_display || parseFloat(txn.amount).toFixed(2);
+                        // ✅ FIXED: Strip commas from the string before parsing
+                        const rawAmountStr = String(txn.amount_display || txn.amount || '0').replace(/,/g, '');
+                        const amountDisplay = Math.abs(parseFloat(rawAmountStr)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        
                         const statusClass = txn.status.toLowerCase();
                         listContainer.innerHTML += `
                             <div class="mini-history-item" data-idx="${transactions.indexOf(txn)}" role="button" tabindex="0" aria-label="View receipt for ${escapeHtml(typeLabel)}">
@@ -1902,7 +1933,12 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             const timeStr = isNaN(d) ? '—' : d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
             const stLabel = s === 'approved' ? 'Completed' : s === 'pending' ? 'Pending' : 'Rejected';
             const stIcon = s === 'approved' ? RC_CHECK : s === 'pending' ? RC_CLOCK : RC_CROSS;
-            const amount = t.amount_display || Math.abs(parseFloat(t.amount) || 0).toFixed(2);
+            
+            // ✅ PATCH START: Strip commas and force absolute value to fix double-negative
+            const rawAmtStr = String(t.amount_display || t.amount || '0').replace(/,/g, '');
+            const amount = Math.abs(parseFloat(rawAmtStr) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            // ✅ PATCH END
+            
             const extra = [];
             const add = (k, v) => { if (v !== undefined && v !== null && String(v).trim() !== '') extra.push([k, v]); };
             const methodRaw = String(t.method || t.payment_method || '');
@@ -1916,6 +1952,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             const noteRaw = String(t.note || t.description || t.reason || '');
             add('Note', /admin/i.test(noteRaw) ? '' : noteRaw);
             const row = (k, v, cls) => `<div class="r-row"><span>${escapeHtml(k)}</span><span class="${cls || ''}">${escapeHtml(v)}</span></div>`;
+            
             document.getElementById('receiptBody').innerHTML = `
                 <div class="r-brand">
                     <div><div class="name">LEDGER</div><div class="sub">SMART MARKET</div></div>
@@ -1947,7 +1984,6 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             document.getElementById('receiptModal').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
-
         async function downloadReceipt() {
             if (!activeTxn) return;
             if (typeof html2canvas === 'undefined') { showToast('error', 'Download tool failed to load.'); return; }
@@ -2148,18 +2184,18 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         }
 
         async function fetchLivePrice(pair) {
-            // 1) Your backend (works even if Binance is blocked on the device)
             try {
                 const d = await fetchJSON(`${API_BASE_URL}/prices`, 8000);
                 const p = d && d.prices && d.prices[pair];
                 if (p) return parseFloat(p);
             } catch (e) {}
-            // 2) Fallback: Binance public mirror
             const sym = pair.includes('BTC') ? 'BTCUSDT'
                       : pair.includes('EUR') ? 'EURUSDT'
-                      : pair.includes('XAU') ? 'PAXGUSDT' : null;
+                      : pair.includes('XAU') ? 'PAXGUSDT'
+                      : pair.includes('US30') ? 'US30' : null;
             if (sym) {
                 try {
+                    if (sym === 'US30') return 39000; // Mock price for US30
                     const d = await fetchJSON(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${sym}`);
                     return parseFloat(d.price);
                 } catch (e) {}
@@ -2170,7 +2206,8 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         async function fetchPriceHistory(pair) {
             const sym = pair.includes('BTC') ? 'BTCUSDT'
                       : pair.includes('EUR') ? 'EURUSDT'
-                      : pair.includes('XAU') ? 'PAXGUSDT' : null;
+                      : pair.includes('XAU') ? 'PAXGUSDT'
+                      : pair.includes('US30') ? null : null;
             if (!sym) return null;
             try {
                 const d = await fetchJSON(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1m&limit=90`);
@@ -2203,6 +2240,10 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
         function hideTradeLoader() { $('tradeLoader').classList.remove('active'); document.body.style.overflow = ''; }
 
         async function selectPackage(pair, price, days, pips, icon, subtext, btnEl) {
+            // ✅ Play click sound
+            const clickSound = document.getElementById('clickSound');
+            if (clickSound) { clickSound.currentTime = 0; clickSound.play().catch(()=>{}); }
+
             if (liveTrade) { showToast('info', 'You already have a live trade running.'); return; }
             
             const originalText = btnEl.innerHTML;
@@ -2287,6 +2328,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             if (failed) { showToast('error', 'Connection error. Please try again.'); return; }
             if (d && d.success && d.trade) {
                 showToast('success', 'Live trade started successfully.');
+                playSuccessSound(); // ✅ Play sound here
                 startLiveTrade(d.trade);
                 fetchUserData(); fetchUserTrades();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2302,10 +2344,16 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             liveTrade = t;
             ltMisses = 0;
             ltClosing = false;
+            ltSettling = false;
             saveLT(t);
             document.documentElement.classList.add('has-live-trade');
             $('mainChart').style.display = 'none';
             $('liveTradePanel').classList.add('active');
+            
+            // ✅ Hide settling overlay if it was left open
+            const so = $('ltSettlingOverlay');
+            if (so) so.style.display = 'none';
+
             const start = new Date(t.started_at).getTime() || Date.now();
             
             setT('ltPackage', `${String(t.package || '').toUpperCase()}`);
@@ -2316,8 +2364,8 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 setT('ltCoinIcon', '€'); setT('ltSub', 'Euro · Forex Trade');
             } else if (t.pair === 'XAU/USD') {
                 setT('ltCoinIcon', 'Au'); setT('ltSub', 'Gold · Commodities');
-            } else if (t.pair === 'XAG/USD') {
-                setT('ltCoinIcon', 'Ag'); setT('ltSub', 'Silver · Commodities');
+            } else if (t.pair === 'US30') {
+                setT('ltCoinIcon', '🏛️'); setT('ltSub', 'Dow Jones · Indices');
             } else {
                 setT('ltCoinIcon', '₿'); setT('ltSub', 'Bitcoin · Crypto Trade');
             }
@@ -2339,7 +2387,6 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             } else { setT('ltEnds', 'No expiry'); setT('ltBarEnd', 'Open-ended'); }
             setT('ltTimerLabel', t.duration_days ? 'TIME REMAINING' : 'TIME RUNNING');
             const st = $('ltStatus'); st.textContent = 'LIVE'; st.classList.remove('ended');
-            // Enable close button
             const closeBtn = $('ltCloseBtn');
             if (closeBtn) { closeBtn.disabled = false; closeBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg> Close Trade Now'; }
             if (isNew) { ltHist = []; ltPrice = null; setT('ltCurrent', 'Loading...'); setT('ltChartPrice', 'Loading...'); }
@@ -2364,18 +2411,25 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
 
         async function settleLiveTrade() {
             if (ltSettling || !liveTrade) return;
-            if (Date.now() - ltLastSettleTry < 15000) return;
-            ltSettling = true; ltLastSettleTry = Date.now();
+            ltSettling = true; 
+            
             try {
-                const r = await fetch(`${API_BASE_URL}/packages/settle`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, trade_id: liveTrade.id }) });
-                const d = await r.json();
-                if (d && d.success) {
-                    endLiveTradeView();
-                    fetchUserData(); fetchUserTrades();
-                    showToast('success', d.message || 'Trade completed.');
-                }
-            } catch (e) {}
-            finally { ltSettling = false; }
+                // Wait 5 seconds for the backend watcher to process the expiry
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Fetch updated user data (to get the new balance)
+                await fetchUserData();
+                await fetchUserTrades();
+                await fetchEquity();
+
+                // Close the view and show the main chart again
+                endLiveTradeView();
+                showToast('success', 'Trade completed. Balance updated.');
+            } catch (e) {
+                console.error("Settlement Error:", e);
+            } finally { 
+                ltSettling = false; 
+            }
         }
 
         // ============ CLOSE TRADE (MANUAL) ============
@@ -2389,7 +2443,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             let leverage = 500;
             const pair = (liveTrade.pair || '').toUpperCase();
             if (pair.includes('XAU') || pair.includes('GOLD')) leverage = 1000;
-            if (pair.includes('XAG') || pair.includes('SILVER')) leverage = 800;
+            if (pair.includes('US30')) leverage = 800;
             if (pair.includes('BTC')) leverage = 500;
             if (pair.includes('EUR')) leverage = 300;
             const leveragedPct = pct * leverage;
@@ -2421,19 +2475,17 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             let d = null, failed = false, errorMsg = '';
             
             try {
-                // Match the backend route exactly: POST /packages/:id/close
                 const r = await fetch(`${API_BASE_URL}/packages/${liveTrade.id}/close`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
-                // Try to parse JSON. If server returns HTML (e.g. 502 Bad Gateway), this will fail.
                 const text = await r.text();
                 try {
                     d = JSON.parse(text);
                 } catch (parseErr) {
                     failed = true;
-                    errorMsg = `Server returned non-JSON response (Status: ${r.status}). Is Render sleeping?`;
+                    errorMsg = `Server returned non-JSON response (Status: ${r.status}).`;
                     console.error("Parse Error:", text);
                 }
                 
@@ -2459,13 +2511,13 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             if (d && d.success) {
                 closeModals();
                 
-                // Compute pnl and total credit from the server response
                 const pnl = (d.trade && d.trade.pnl != null) ? Number(d.trade.pnl) : null;
                 const credited = (d.credited != null) ? Number(d.credited) : ((d.trade && d.trade.total_credit != null) ? Number(d.trade.total_credit) : null);
                 const sym = getCurrencySymbol();
                 
                 endLiveTradeView();
                 fetchUserData(); fetchUserTrades();
+                playSuccessSound(); // ✅ Play sound on close
                 
                 if (credited != null) {
                     const creditedLocal = convert(credited);
@@ -2525,7 +2577,11 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 if (rem === 0) {
                     setT('ltStatus', 'SETTLING');
                     $('ltStatus').classList.add('ended');
-                    setT('ltTimerLabel', 'TRADE PERIOD COMPLETE');
+                    setT('ltTimerLabel', 'TRADE SETTLING');
+                    
+                    const settleOverlay = $('ltSettlingOverlay');
+                    if (settleOverlay) settleOverlay.style.display = 'flex';
+                    
                     settleLiveTrade();
                 }
             } else {
@@ -2539,11 +2595,10 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                 const entry = Number(t.entry_price);
                 const pct = dir * (ltPrice - entry) / entry;
                 
-                // ===== MAXIMUM LEVERAGE FOR VERY VERY BIG P&L =====
                 let leverage = 500;
                 const pair = (t.pair || '').toUpperCase();
                 if (pair.includes('XAU') || pair.includes('GOLD')) leverage = 1000;
-                if (pair.includes('XAG') || pair.includes('SILVER')) leverage = 800;
+                if (pair.includes('US30')) leverage = 800;
                 if (pair.includes('BTC')) leverage = 500;
                 if (pair.includes('EUR')) leverage = 300;
                 
@@ -2639,21 +2694,43 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
                     if (!liveTrade || liveTrade.id !== d.trade.id) startLiveTrade(d.trade);
                     else { liveTrade = d.trade; saveLT(d.trade); }
                 } else if (d.success && liveTrade) {
-                    const end = ltEndTime(liveTrade);
-                    if (end) {
-                        if (Date.now() >= end) {
-                            endLiveTradeView();
-                            fetchUserData(); fetchUserTrades();
-                            showToast('success', 'Your live trade has ended. Your balance has been updated.');
-                        }
-                    } else {
-                        ltMisses++;
-                        if (ltMisses >= 3) endLiveTradeView();
-                    }
+                    endLiveTradeView();
+                    closeModals();
+                    fetchUserData(); fetchUserTrades();
+                    showToast('error', 'Margin Call: Trade was auto-closed by the server.');
                 }
             } catch (e) {
                 if (ltLoadTries++ < 6) setTimeout(loadActiveTrade, 5000);
             }
+        }
+
+        async function fetchEquity() {
+            try {
+                const r = await fetch(`${API_BASE_URL}/user/${currentUser.id}/equity`);
+                const d = await r.json();
+                if (d.success) {
+                    const sym = getCurrencySymbol();
+                    const eqEl = document.getElementById('statEquity');
+                    if (eqEl) eqEl.innerText = `${sym}${money(convert(d.equity))}`;
+                    
+                    const fmEl = document.getElementById('statFreeMargin');
+                    if (fmEl) fmEl.innerText = `${sym}${money(convert(d.freeMargin))}`;
+                    
+                    const umEl = document.getElementById('statUsedMargin');
+                    if (umEl) umEl.innerText = `${sym}${money(convert(d.usedMargin))}`;
+                    
+                    const mlEl = document.getElementById('statMarginLevel');
+                    if (mlEl) {
+                        if (d.usedMargin > 0) {
+                            mlEl.innerText = `${d.marginLevel.toFixed(2)}%`;
+                            mlEl.style.color = d.marginLevel <= 100 ? 'var(--primary-red)' : 'var(--primary-teal)';
+                        } else {
+                            mlEl.innerText = `0.00%`;
+                            mlEl.style.color = 'var(--primary-teal)';
+                        }
+                    }
+                }
+            } catch(e) {}
         }
 
         function calcTotal(type) {
@@ -2688,7 +2765,15 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             try {
                 const response = await fetch(`${API_BASE_URL}/trade`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, trade_type: type, pair: pair, action: action, amount: amount, lot_size: lotSize, stop_loss: stopLoss }) });
                 const data = await response.json();
-                if (data.success) { showToast('success', data.message); amountInput.value = ''; stopInput.value = ''; calcTotal(type.toLowerCase()); fetchUserData(); fetchUserTrades(); }
+                if (data.success) { 
+                    showToast('success', data.message); 
+                    playSuccessSound(); // ✅ Play sound on crypto/forex trade
+                    amountInput.value = ''; 
+                    stopInput.value = ''; 
+                    calcTotal(type.toLowerCase()); 
+                    fetchUserData(); 
+                    fetchUserTrades(); 
+                }
                 else showToast('error', data.message || 'Trade failed.');
             } catch (error) { showToast('error', 'Connection error. Please try again.'); }
             finally { btn.innerText = originalText; btn.disabled = false; }
@@ -2725,6 +2810,7 @@ body { min-height: 100vh; display: flex; flex-direction: column; position: relat
             loadForexCrossRates();
             loadTradingViewTicker();
             if (liveTrade) drawLtChart();
+            fetchEquity(); // Initial equity fetch
         };
     </script>
 
@@ -2765,6 +2851,12 @@ setInterval(function () {
     }
   } catch (e) {}
 }, 1000);
+
+// ✅ Poll Equity every 5s to make balance float
+setInterval(function() {
+    if (currentUser && currentUser.id) fetchEquity();
+}, 5000);
+
 </script>
 </body>
 </html>
