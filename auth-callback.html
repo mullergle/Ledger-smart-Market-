@@ -1,75 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Signing you in…</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        :root {
+            --bg-dark: #050505;
+            --bg-panel: #0f0f12;
+            --primary-bright: #f0b90b;
+            --primary-glow: rgba(240,185,11,0.35);
+            --primary-teal: #1ebba3;
+            --primary-red: #f23645;
+            --text-white: #ffffff;
+            --text-gray: #9b9ba3;
+            --border-color: #2a2a2e;
+            --input-bg: #141418;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            margin: 0; padding: 0;
+            background: #050505 !important;
+            width: 100%; max-width: 100vw; overflow-x: hidden;
+            overscroll-behavior-y: none;
+        }
         body {
-            background-color: #0d0a14;
-            color: #fff;
-            height: 100vh;
+            background: linear-gradient(180deg, #131315 0%, #070708 45%, #030303 100%) fixed;
+            color: var(--text-white);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 20px;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
         }
-        
-        /* Classic Apex Spinner */
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(168, 85, 247, 0.2);
-            border-top-color: #a855f7;
+
+        /* ================= SPINNER ================= */
+        .spinner-wrap {
+            position: relative;
+            width: 56px; height: 56px;
+            margin-bottom: 28px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ios-spinner {
+            position: relative;
+            width: 48px; height: 48px;
+            animation: iosSpinDecay 1.2s cubic-bezier(0.45, 0.05, 0.15, 1) infinite;
+        }
+        .ios-spinner .dot {
+            position: absolute;
+            width: 12px; height: 12px;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 24px;
+            background-color: var(--primary-bright);
+            box-shadow: 0 0 12px rgba(240,185,11,0.5);
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .ios-spinner .dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+        .ios-spinner .dot:nth-child(2) { bottom: 6px; right: 4px; }
+        .ios-spinner .dot:nth-child(3) { bottom: 6px; left: 4px; }
+        @keyframes iosSpinDecay { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
 
-        h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
-        p { color: #a09ab0; font-size: 14px; }
+        /* ================= TEXT ================= */
+        h2#status {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+        p#sub-status {
+            font-size: 14px;
+            color: var(--text-gray);
+            max-width: 340px;
+            line-height: 1.5;
+        }
 
-        /* Error Box */
+        /* ================= ERROR BOX ================= */
         #error-box {
-            background: rgba(242, 54, 69, 0.1);
-            border: 1px solid #f23645;
-            padding: 20px;
+            background: rgba(242, 54, 69, 0.08);
+            border: 1px solid rgba(242, 54, 69, 0.5);
+            border-left: 3px solid var(--primary-red);
+            padding: 18px 20px;
             border-radius: 12px;
             display: none;
             max-width: 400px;
             width: 100%;
             text-align: left;
-            margin-top: 20px;
+            margin-top: 28px;
             word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+            overflow-wrap: anywhere;
+            animation: fadeIn 0.35s ease;
         }
-        #error-box b { color: #f23645; }
-        #error-box span { color: #fff; font-size: 13px; line-height: 1.5; display: block; margin-top: 8px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #error-box b {
+            color: var(--primary-red);
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 8px;
+            letter-spacing: 0.2px;
+        }
+        #error-box span {
+            color: #e6e6e6;
+            font-size: 13px;
+            line-height: 1.55;
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-        /* Brand Logo */
-        .logo-text {
-            font-weight: 800;
-            font-size: 24px;
-            letter-spacing: 1px;
-            color: #fff;
-            margin-bottom: 40px;
-            text-transform: uppercase;
+        /* Success state — tint the spinner dots teal */
+        body.success .ios-spinner .dot {
+            background-color: var(--primary-teal);
+            box-shadow: 0 0 12px rgba(30,187,163,0.5);
         }
-        .logo-text span { color: #a855f7; }
+        body.success .ios-spinner {
+            animation: none;
+            transform: rotate(0deg);
+        }
+        body.success #status { color: var(--primary-teal); }
     </style>
 </head>
 <body>
 
-    <div class="logo-text">APEX<span>.</span></div>
+    <div class="spinner-wrap">
+        <div class="ios-spinner" id="spinner">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
 
-    <div class="spinner" id="spinner"></div>
-    <h2 id="status">Authenticating...</h2>
+    <h2 id="status">Authenticating…</h2>
     <p id="sub-status">Please wait while we verify your secure session.</p>
 
     <div id="error-box">
@@ -86,77 +157,82 @@
         );
 
         const API_BASE_URL = 'https://apexline-market.onrender.com';
-        
-        const spinner = document.getElementById('spinner');
-        const statusEl = document.getElementById('status');
+
+        const spinner     = document.getElementById('spinner');
+        const statusEl    = document.getElementById('status');
         const subStatusEl = document.getElementById('sub-status');
-        const errorBox = document.getElementById('error-box');
-        const errorText = document.getElementById('error-text');
+        const errorBox    = document.getElementById('error-box');
+        const errorText   = document.getElementById('error-text');
 
         (async () => {
-            // 1. Wait a moment for Supabase to read the URL hash
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 1. Give Supabase a moment to parse the URL hash
+            await new Promise(r => setTimeout(r, 1000));
 
-            // 2. Get the Supabase Session
+            // 2. Read the session
             const { data, error } = await supabase.auth.getSession();
 
             if (error || !data?.session) {
                 spinner.style.display = 'none';
-                statusEl.innerText = "Login Failed";
-                subStatusEl.innerText = "Could not retrieve session. Redirecting back...";
+                statusEl.innerText = 'Login Failed';
+                subStatusEl.innerText = 'Could not retrieve session. Redirecting back…';
                 setTimeout(() => window.location.replace('index.html'), 2500);
                 return;
             }
 
-            const user = data.session.user;
-            const email = user.email;
-            const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
+            const user     = data.session.user;
+            const email    = user.email;
+            const fullName = user.user_metadata?.full_name
+                          || user.user_metadata?.name
+                          || email.split('@')[0];
 
-            // 3. Update UI
-            statusEl.innerText = "Syncing Account...";
-            subStatusEl.innerText = "Connecting to Apex database.";
+            // 3. Sync with backend
+            statusEl.innerText    = 'Syncing Account…';
+            subStatusEl.innerText = 'Connecting to secure database.';
 
-            // 4. Send to backend
             try {
                 const res = await fetch(`${API_BASE_URL}/login/google`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, fullName: fullName, supabase_id: user.id })
+                    body: JSON.stringify({
+                        email,
+                        fullName,
+                        supabase_id: user.id
+                    })
                 });
-                
+
                 const out = await res.json();
-                console.log("Backend response:", out);
+                console.log('Backend response:', out);
 
                 if (!res.ok || out.success === false) {
                     throw new Error(out.message || 'Database sync failed.');
                 }
-
             } catch (e) {
                 console.warn('Backend connection failed:', e);
                 spinner.style.display = 'none';
-                statusEl.innerText = "Connection Error";
-                subStatusEl.innerText = "Failed to connect to the server.";
+                statusEl.innerText    = 'Connection Error';
+                subStatusEl.innerText = 'Failed to reach the server.';
                 errorBox.style.display = 'block';
-                errorText.innerHTML = `${e.message || 'Unknown error'}<br><br>Please check if the Render server is awake and try again.`;
+                errorText.innerHTML = `${e.message || 'Unknown error'}<br><br>Please check that the Render server is awake and try again.`;
                 return;
             }
 
-            // 5. Save locally and redirect
-            statusEl.innerText = "Success!";
-            subStatusEl.innerText = "Redirecting to your dashboard...";
-            
-            localStorage.setItem('nexoraUser', JSON.stringify({ 
-                id: user.id, // 🔥 CRITICAL FIX: This makes the dashboard work!
-                email: email, 
-                full_name: fullName, 
-                provider: 'google', 
-                supabase_id: user.id 
+            // 4. Persist session locally
+            statusEl.innerText    = 'Success!';
+            subStatusEl.innerText = 'Redirecting to your dashboard…';
+            document.body.classList.add('success');
+
+            localStorage.setItem('nexoraUser', JSON.stringify({
+                id: user.id,
+                email,
+                full_name: fullName,
+                provider: 'google',
+                supabase_id: user.id
             }));
             localStorage.setItem('nexoraToken', data.session.access_token);
-            
-            setTimeout(() => {
-                window.location.replace('dashboard.html');
-            }, 500);
+            localStorage.setItem('nexoraLastSeen', String(Date.now()));
+            localStorage.setItem('nexoraJoinedAt', String(Date.now()));
+
+            setTimeout(() => window.location.replace('dashboard.html'), 600);
         })();
     </script>
 </body>
