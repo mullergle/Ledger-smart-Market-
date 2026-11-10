@@ -1,623 +1,715 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ledger Smart Market | Full Trade History</title>
-
-<script>
-(function () {
-  const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-  const WARN_BEFORE_MS = 2 * 60 * 1000;
-  const LOGIN_PAGE = 'index.html';
-  const LAST_SEEN_KEY = 'nexoraLastSeen';
-  const WRITE_THROTTLE_MS = 30_000;
-  const currentPage = location.pathname.split('/').pop() || 'index.html';
-  const isLoginPage = currentPage === LOGIN_PAGE;
-  const AUTH_KEYS = ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'];
-  const SESSION_KEYS = ['popupShown','nexoraState'];
-  const clearAuth = () => { AUTH_KEYS.forEach(k => localStorage.removeItem(k)); SESSION_KEYS.forEach(k => sessionStorage.removeItem(k)); };
-  const logout = () => { clearAuth(); if (!isLoginPage) location.replace(LOGIN_PAGE); };
-  const isExpired = (t) => t > 0 && (Date.now() - t) > IDLE_TIMEOUT_MS;
-  if (!isLoginPage && !localStorage.getItem('nexoraUser')) { location.replace(LOGIN_PAGE); return; }
-  const lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
-  if (isExpired(lastSeen)) { logout(); return; }
-  let lastWrite = Date.now();
-  localStorage.setItem(LAST_SEEN_KEY, String(lastWrite));
-  const touch = () => { const t = Date.now(); if (t - lastWrite < WRITE_THROTTLE_MS) return; lastWrite = t; localStorage.setItem(LAST_SEEN_KEY, String(t)); };
-  ['click','keydown','scroll','touchstart','pointerdown'].forEach(evt => window.addEventListener(evt, touch, { passive: true }));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) return; const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0); if (isExpired(t)) logout(); });
-  window.addEventListener('pageshow', (e) => { if (e.persisted && !localStorage.getItem('nexoraUser')) location.replace(LOGIN_PAGE); });
-  setInterval(() => {
-    const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
-    if (!t) return;
-    if (isExpired(t)) { logout(); return; }
-    const remaining = IDLE_TIMEOUT_MS - (Date.now() - t);
-    if (remaining > 0 && remaining < WARN_BEFORE_MS) console.warn(`Auto-logout in ${Math.ceil(remaining / 1000)}s`);
-  }, 15_000);
-})();
-</script>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Create account · Ledger Smart Market</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
 :root{
-  --bg-dark:#000000;
-  --bg-panel:#0a0a0a;
-  --primary-orange:#f0b90b;
-  --primary-bright:#f0b90b;
-  --primary-teal:#1ebba3;
-  --primary-red:#f23645;
-  --text-white:#ffffff;
-  --text-gray:#9b9ba3;
-  --border-color:#2a2a2e;
-  --input-bg:#141414;
-  --green:#2ecc71;
-  --amber:#f0a020;
-  --buy-green:#0ecb81;
-  --sidebar-bg-top:#14120a;
-  --sidebar-bg-bottom:#000000;
+  --bg:#050505;
+  --fg:#ffffff;
+  --muted:#9b9ba3;
+  --dim:#6c6c75;
+  --border:#2a2a2e;
+  --border-soft:#1f1f24;
+  --input:#141418;
+  --btn:#17171b;
+  --yellow:#f0b90b;
+  --yellow-light:#fcd535;
+  --yellow-dark:#b98a08;
+  --glow:rgba(240,185,11,0.35);
+  --red:#f23645;
+  --green:#0ecb81;
+  --p:calc(min(100vw,460px)/1125);
 }
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
-html{scroll-behavior:smooth;width:100%;max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{background:#000;color:var(--text-white);line-height:1.5;width:100%;max-width:100vw;overflow-x:hidden;padding-bottom:40px}
-img,svg,video,canvas,iframe{max-width:100%}
-a{text-decoration:none;color:inherit} ul{list-style:none} button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-
-/* ===== Loader (matches dashboard splash) ===== */
-.global-loader-overlay{position:fixed;inset:0;z-index:9999;background:rgba(5,5,5,0.55);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;opacity:1;visibility:visible;transition:opacity .6s ease,visibility .6s ease}
-.global-loader-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
-.loader-spinner{position:relative;width:52px;height:52px;animation:spinDecay 1.2s cubic-bezier(0.45,0.05,0.15,1) infinite;margin-bottom:28px}
-.loader-spinner .dot{position:absolute;width:13px;height:13px;border-radius:50%;background-color:var(--primary-bright);box-shadow:0 0 14px rgba(240,185,11,0.55)}
-.loader-spinner .dot:nth-child(1){top:0;left:50%;transform:translateX(-50%)}
-.loader-spinner .dot:nth-child(2){bottom:6px;right:4px}
-.loader-spinner .dot:nth-child(3){bottom:6px;left:4px}
-@keyframes spinDecay{0%{transform:rotate(0deg)}100%{transform:rotate(1080deg)}}
-.loader-title{font-size:17px;font-weight:700;letter-spacing:2.5px;color:#f0b90b;text-transform:uppercase;margin:0 0 8px;text-shadow:0 0 24px rgba(240,185,11,0.4)}
-.loader-sub{font-size:12px;color:#9b9ba3;letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
-
-/* ===== Header (logo removed) ===== */
-.page-header{display:flex;align-items:center;gap:15px;padding:14px 16px;background:rgba(0,0,0,0.92);border-bottom:1px solid rgba(240,185,11,0.25);position:sticky;top:0;z-index:1000;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.back-btn{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;justify-content:center;align-items:center;cursor:pointer;transition:background .2s;flex-shrink:0}
-.back-btn:hover{background:rgba(240,185,11,.18)}
-.back-btn svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-.page-header-info{min-width:0}
-.page-header-info h2{font-size:18px;font-weight:700;line-height:1.2;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.page-header-info p{font-size:11px;color:var(--text-gray);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-.container{padding:16px;max-width:600px;margin:0 auto}
-
-/* ===== Stats pills ===== */
-.history-stats-bar{display:flex;gap:8px;padding:12px;margin-bottom:16px;background:var(--bg-panel);border-radius:14px;border:1px solid rgba(240,185,11,0.18);overflow-x:auto;scrollbar-width:none}
-.history-stats-bar::-webkit-scrollbar{display:none}
-.history-stat-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid var(--border-color);font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-gray);cursor:pointer;transition:all .2s}
-.history-stat-pill.active{border-color:var(--primary-bright);background:rgba(240,185,11,.15);color:#fff}
-.history-stat-pill .pill-dot{width:8px;height:8px;border-radius:50%}
-.history-stat-pill.total .pill-dot{background:var(--primary-bright)}
-.history-stat-pill.approved .pill-dot{background:var(--green)}
-.history-stat-pill.pending .pill-dot{background:var(--amber);animation:pulse 1.5s infinite}
-.history-stat-pill.rejected .pill-dot{background:var(--primary-red)}
-.history-stat-pill .pill-count{color:#fff;font-weight:700;margin-left:4px}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
-
-/* ===== Cards ===== */
-.history-list{display:flex;flex-direction:column;gap:12px}
-.history-card{background:linear-gradient(160deg,#0f0f0f,#050505);border:1px solid rgba(240,185,11,0.18);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;transition:border-color .2s,transform .15s;box-shadow:0 10px 20px rgba(0,0,0,.4);cursor:pointer;text-align:left;width:100%}
-.history-card:hover{border-color:rgba(240,185,11,.5);box-shadow:0 15px 35px rgba(240,185,11,.1)}
-.history-card:active{transform:scale(.99)}
-.history-card:focus-visible{outline:2px solid var(--primary-bright);outline-offset:2px}
-.hc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.hc-type-wrap{display:flex;align-items:center;gap:12px;min-width:0}
-.hc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.hc-icon.deposit{background:rgba(30,187,163,.15);color:var(--primary-teal)}
-.hc-icon.withdrawal{background:rgba(242,54,69,.15);color:var(--primary-red)}
-.hc-icon.trade{background:rgba(240,185,11,.14);color:var(--primary-bright)}
-.hc-icon.copytrade,.hc-icon.copyout{background:rgba(240,185,11,.2);color:#fcd535}
-.hc-icon.copyin{background:rgba(46,204,113,.15);color:var(--green)}
-.hc-icon.bonus{background:rgba(212,160,23,.15);color:#f0c040}
-.hc-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hc-type-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.hc-type-text h4{font-size:15px;font-weight:700;color:#fff;line-height:1.2}
-.hc-type-text span{font-size:12px;color:var(--text-gray);line-height:1.2}
-.hc-amount{font-size:16px;font-weight:800;white-space:nowrap}
-.hc-amount.positive{color:var(--green)} .hc-amount.negative{color:var(--primary-red)}
-.hc-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px dashed rgba(255,255,255,.08);gap:10px;flex-wrap:wrap}
-.hc-date{font-size:11px;color:var(--text-gray);font-weight:500;display:flex;align-items:center;gap:6px}
-.hc-date svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
-.hc-right{display:flex;align-items:center;gap:10px}
-.hc-receipt{font-size:11px;font-weight:700;color:var(--primary-bright);display:flex;align-items:center;gap:4px}
-.hc-receipt svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-.premium-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.premium-badge::before{content:'';width:5px;height:5px;border-radius:50%}
-.premium-badge.approved{background:rgba(46,204,113,.12);color:var(--green)} .premium-badge.approved::before{background:var(--green)}
-.premium-badge.pending{background:rgba(240,160,32,.12);color:var(--amber)} .premium-badge.pending::before{background:var(--amber);animation:pulse 1.5s infinite}
-.premium-badge.rejected{background:rgba(242,54,69,.12);color:var(--primary-red)} .premium-badge.rejected::before{background:var(--primary-red)}
-
-/* ===== Pagination ===== */
-.premium-pagination{display:flex;justify-content:space-between;align-items:center;padding:16px;margin-top:16px;background:var(--bg-panel);border-radius:14px;border:1px solid rgba(240,185,11,0.18);flex-wrap:wrap;gap:10px}
-.pagination-info{font-size:12px;color:var(--text-gray);font-weight:500}
-.pagination-info strong{color:#fff;font-weight:600}
-.pagination-controls{display:flex;gap:8px}
-.page-btn{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;background:rgba(255,255,255,.03);color:#fff;border:1px solid var(--border-color);transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.page-btn:hover:not(:disabled){background:rgba(240,185,11,.15);border-color:var(--primary-bright);color:var(--primary-bright)}
-.page-btn:disabled{opacity:.35;cursor:not-allowed}
-.page-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-
-.empty-state{padding:50px 20px;text-align:center;color:var(--text-gray);display:flex;flex-direction:column;align-items:center;gap:12px;background:var(--bg-panel);border-radius:14px;border:1px solid rgba(240,185,11,0.18);font-size:13px}
-.empty-state svg{width:44px;height:44px;stroke:var(--text-gray);fill:none;stroke-width:1.5;opacity:.5}
-.empty-state button{padding:10px 20px;border-radius:8px;background:var(--primary-bright);color:#000;font-weight:700;font-size:13px;margin-top:6px}
-
-/* ===== Receipt modal ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:3000;display:none;justify-content:center;align-items:flex-end;backdrop-filter:blur(5px);overflow-y:auto}
-.modal-overlay.active{display:flex}
-@media(min-width:560px){.modal-overlay{align-items:center;padding:20px}}
-.receipt-wrap{width:100%;max-width:440px;margin:auto;animation:sheetUp .3s ease-out}
-@keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
-.receipt-top{display:flex;justify-content:space-between;align-items:center;padding:14px 8px 12px}
-.receipt-top h3{font-size:15px;font-weight:600;color:var(--text-gray)}
-.close-modal{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;color:#fff}
-.receipt{background:#fff;color:#0f0f12;border-radius:16px 16px 0 0;position:relative;padding:28px 20px 24px;overflow:hidden}
-.receipt::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#b98a08,#fcd535,#b98a08)}
-.r-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.r-brand .name{font-weight:800;font-size:18px;letter-spacing:1.2px;color:#1c1c20;line-height:1}
-.r-brand .sub{font-size:8px;letter-spacing:1.8px;color:#8d8d8d;font-weight:600;margin-top:3px}
-.r-brand .doc{font-size:11px;font-weight:700;color:#8d8d8d;text-align:right;letter-spacing:.5px}
-.r-status{text-align:center;padding:6px 0 18px;border-bottom:1px dashed #dadada}
-.r-status .ico{width:56px;height:56px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
-.r-status .ico svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.r-status.approved .ico{background:#1ebba3}.r-status.pending .ico{background:#f0a020}.r-status.rejected .ico{background:#f23645}
-.r-status .st{font-size:13px;font-weight:700;margin-bottom:2px}
-.r-status.approved .st{color:#12907d}.r-status.pending .st{color:#b9770e}.r-status.rejected .st{color:#c42030}
-.r-amount{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:2px;overflow-wrap:anywhere}
-.r-type{font-size:13px;color:#727272;margin-top:2px}
-.r-rows{padding:14px 0 6px}
-.r-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;font-size:13px}
-.r-row span:first-child{color:#7d7d7d;flex-shrink:0}
-.r-row span:last-child{font-weight:600;text-align:right;word-break:break-all}
-.r-row .ref{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-.r-total{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;margin-top:8px;background:#f5f5f5;border-radius:10px;font-weight:700}
-.r-total span:last-child{font-size:17px}
-.r-foot{margin-top:18px;text-align:center;font-size:11px;color:#8d8d8d;line-height:1.6}
-.r-tear{height:14px;background:radial-gradient(circle at 7px 0,transparent 7px,#fff 7.5px) 0 0/14px 14px repeat-x;margin-top:-1px}
-.receipt-actions{display:flex;gap:10px;padding:14px 0 22px}
-.receipt-actions button{flex:1;padding:14px;border-radius:10px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;color:#fff}
-.receipt-actions svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.btn-primary{background:var(--primary-bright);color:#000!important}.btn-primary:hover{background:#fcd535}
-.btn-ghost{background:var(--input-bg);border:1px solid var(--border-color)!important}
-
-.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#141414;border:1px solid #2a2a2e;border-left:4px solid var(--primary-teal);padding:12px 18px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.6);animation:slideDown .3s ease;color:#fff}
-@keyframes slideDown{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
-@media print{
-  body{background:#fff;padding:0}
-  body>*:not(#receiptModal){display:none!important}
-  #receiptModal{display:block!important;position:static;background:#fff;padding:0;backdrop-filter:none}
-  .receipt-top,.receipt-actions,.r-tear{display:none!important}
-  .receipt-wrap{max-width:100%;animation:none}
-  .receipt{border-radius:0;border:1px solid #ddd}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#050505;overscroll-behavior-y:none}
+body{
+  background:linear-gradient(180deg,#131315 0%,#070708 45%,#030303 100%) fixed;
+  color:var(--fg);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  font-size:calc(42*var(--p));
 }
+
+/* ===== LOADER ===== */
+.loader-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(5,5,5,0.82);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transition:opacity .35s ease, visibility .35s ease;
+}
+.loader-overlay.active{opacity:1;visibility:visible}
+.spinner{
+  position:relative;width:48px;height:48px;
+  animation:spinDecay 1.2s cubic-bezier(0.45,0.05,0.15,1) infinite;
+}
+.spinner .dot{
+  position:absolute;width:12px;height:12px;border-radius:50%;
+  background:var(--yellow);box-shadow:0 0 12px rgba(240,185,11,0.5);
+}
+.spinner .dot:nth-child(1){top:0;left:50%;transform:translateX(-50%)}
+.spinner .dot:nth-child(2){bottom:6px;right:4px}
+.spinner .dot:nth-child(3){bottom:6px;left:4px}
+@keyframes spinDecay{0%{transform:rotate(0)}100%{transform:rotate(1080deg)}}
+
+/* ===== PAGE ===== */
+.page{width:min(100vw,460px);margin:0 auto;position:relative;min-height:100vh;display:flex;flex-direction:column}
+
+/* ===== X EXIT BUTTON ===== */
+.x-exit{
+  position:fixed;
+  top:16px;
+  right:16px;
+  z-index:1000;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#c8c8cf;
+  cursor:pointer;
+  transition:background .2s, color .2s, transform .2s, border-color .2s;
+  text-decoration:none;
+}
+.x-exit:hover{
+  background:rgba(240,185,11,0.14);
+  color:var(--yellow);
+  border-color:rgba(240,185,11,0.4);
+  transform:rotate(90deg);
+}
+.x-exit svg{
+  width:18px;
+  height:18px;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  fill:none;
+}
+
+/* ===== HERO ===== */
+.hero{
+  position:relative;background:#050505;overflow:hidden;
+  padding:calc(52*var(--p)) calc(48*var(--p)) calc(220*var(--p));
+}
+.hero::before{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:calc(420*var(--p));
+  background:linear-gradient(to bottom, rgba(5,5,5,0) 0%, #14120a 40%, #1c1607 80%, #2a1f08 100%);
+  pointer-events:none;
+}
+.hero-stars{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(1.4px 1.4px at 78% 42%,rgba(252,213,53,0.7) 50%,transparent 55%),
+    radial-gradient(1.4px 1.4px at 88% 58%,rgba(240,185,11,0.5) 50%,transparent 55%),
+    radial-gradient(1.4px 1.4px at 62% 72%,rgba(252,213,53,0.55) 50%,transparent 55%),
+    radial-gradient(1.4px 1.4px at 72% 82%,rgba(240,185,11,0.4) 50%,transparent 55%),
+    radial-gradient(1.4px 1.4px at 92% 30%,rgba(252,213,53,0.35) 50%,transparent 55%);
+}
+
+/* ===== BRAND ===== */
+.brand{
+  position:relative;z-index:2;
+  display:flex;align-items:center;gap:calc(18*var(--p));
+  width:fit-content;
+}
+.brand-mark{width:calc(56*var(--p));height:calc(56*var(--p));flex-shrink:0;filter:drop-shadow(0 0 22px rgba(240,185,11,0.4))}
+.brand-text{display:flex;flex-direction:column;gap:calc(7*var(--p));line-height:1}
+.brand-word{
+  font-size:calc(30*var(--p));
+  font-weight:800;
+  letter-spacing:calc(6*var(--p));
+  background:linear-gradient(90deg,#f0b90b,#fcd535);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin:0;padding:0;
+}
+.brand-sub{
+  font-size:calc(14*var(--p));
+  font-weight:600;
+  letter-spacing:calc(3.8*var(--p));
+  color:#8b8b93;
+  margin:0;padding:0;
+  text-transform:uppercase;
+}
+
+/* ===== HERO CONTENT ===== */
+.have{
+  position:relative;z-index:2;
+  margin:calc(60*var(--p)) 0 0;
+  font-size:calc(34*var(--p));
+  color:#a8a8b0;
+  font-weight:500;
+  display:flex;align-items:center;gap:calc(20*var(--p));flex-wrap:wrap;
+}
+.have a{
+  color:var(--yellow);
+  text-decoration:none;
+  font-weight:700;
+  display:inline-flex;align-items:center;gap:calc(10*var(--p));
+  transition:gap .2s;
+}
+.have a:hover{gap:calc(16*var(--p))}
+.have a::after{content:'→';font-size:calc(38*var(--p))}
+
+h1{
+  position:relative;z-index:2;
+  margin:calc(28*var(--p)) 0 calc(16*var(--p));
+  font-size:calc(64*var(--p));
+  line-height:1.08;
+  font-weight:800;
+  letter-spacing:-.02em;
+  color:#fff;
+}
+h1 .accent{
+  background:linear-gradient(90deg,#f0b90b,#fcd535);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.lead{
+  position:relative;z-index:2;
+  margin:0;
+  font-size:calc(36*var(--p));
+  line-height:calc(56*var(--p));
+  color:#8b8b93;
+  max-width:calc(720*var(--p));
+}
+
+/* ===== MASCOT ===== */
+.mascot{
+  position:absolute;
+  right:calc(48*var(--p));
+  bottom:calc(70*var(--p));
+  width:calc(210*var(--p));
+  height:calc(210*var(--p));
+  z-index:1;
+  filter:drop-shadow(0 0 40px rgba(240,185,11,0.45));
+  animation:float 6s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+
+/* ===== CARD ===== */
+.card{
+  position:relative;
+  margin-top:calc(-140*var(--p));
+  padding:calc(70*var(--p)) calc(60*var(--p)) calc(60*var(--p));
+  background:linear-gradient(180deg, rgba(15,15,18,0.95) 0%, rgba(10,10,13,0.98) 100%);
+  border-top:calc(2*var(--p)) solid var(--border-soft);
+  border-radius:calc(38*var(--p)) calc(38*var(--p)) 0 0;
+  z-index:3;
+  flex:1;
+  box-shadow:0 calc(-20*var(--p)) calc(60*var(--p)) rgba(0,0,0,0.6);
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:calc(3*var(--p));
+  background:linear-gradient(90deg,transparent,var(--yellow),transparent);
+  border-radius:calc(38*var(--p)) calc(38*var(--p)) 0 0;
+}
+.card h2{
+  font-size:calc(52*var(--p));
+  font-weight:800;
+  margin:0 0 calc(44*var(--p));
+  letter-spacing:-.01em;
+  color:#fff;
+  line-height:1.15;
+}
+.card h2 .accent{
+  background:linear-gradient(90deg,#f0b90b,#fcd535);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* ===== STEP CONTAINERS ===== */
+.step{display:none}
+.step.active{display:block;animation:stepIn .3s ease}
+@keyframes stepIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== SSO BUTTONS ===== */
+.sso{
+  display:flex;align-items:center;justify-content:center;gap:calc(20*var(--p));
+  width:100%;height:calc(96*var(--p));
+  border:calc(2*var(--p)) solid var(--border);
+  background:var(--btn);
+  color:var(--fg);
+  border-radius:calc(16*var(--p));
+  font-family:inherit;font-size:calc(38*var(--p));font-weight:600;
+  margin-bottom:calc(20*var(--p));
+  cursor:pointer;
+  transition:border-color .2s, background .2s, transform .15s;
+}
+.sso:hover{border-color:rgba(240,185,11,0.45);background:#1c1c22}
+.sso:active{transform:scale(.99)}
+.sso svg{width:calc(44*var(--p));height:calc(44*var(--p));flex-shrink:0}
+
+/* ===== DIVIDER ===== */
+.or{
+  display:flex;align-items:center;gap:calc(24*var(--p));
+  margin:calc(36*var(--p)) 0;
+  font-size:calc(34*var(--p));font-weight:500;
+  color:var(--dim);
+  justify-content:center;
+}
+.or::before,.or::after{
+  content:"";flex:1;height:calc(2*var(--p));
+  background:linear-gradient(90deg,transparent,rgba(240,185,11,0.22),transparent);
+}
+
+/* ===== FORM ===== */
+label{
+  display:block;
+  font-weight:600;
+  font-size:calc(34*var(--p));
+  color:#e0e0e5;
+  margin:0 0 calc(14*var(--p));
+  line-height:1.4;
+}
+input,select{
+  width:100%;height:calc(116*var(--p));
+  border:calc(2*var(--p)) solid var(--border);
+  background:var(--input);
+  color:var(--fg);
+  border-radius:calc(16*var(--p));
+  padding:0 calc(32*var(--p));
+  font-family:inherit;
+  font-size:max(16px,calc(44*var(--p)));
+  font-weight:500;
+  margin-bottom:calc(36*var(--p));
+  transition:border-color .2s, box-shadow .2s;
+}
+select{
+  appearance:none;-webkit-appearance:none;
+  cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'%3E%3Cpath fill='%23f0b90b' d='M7 10L0 0h14z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right calc(32*var(--p)) center;
+  background-size:calc(24*var(--p)) calc(18*var(--p));
+  padding-right:calc(70*var(--p));
+}
+input::placeholder{color:var(--dim);font-weight:400}
+input:focus,select:focus{
+  outline:none;
+  border-color:var(--yellow);
+  box-shadow:0 0 0 calc(3*var(--p)) rgba(240,185,11,0.15);
+}
+input:focus-visible,select:focus-visible,.cta:focus-visible,.sso:focus-visible,a:focus-visible{
+  outline:calc(3*var(--p)) solid var(--yellow);
+  outline-offset:calc(3*var(--p));
+}
+#verifyCode{
+  text-align:center;
+  letter-spacing:calc(18*var(--p));
+  font-size:calc(56*var(--p))!important;
+  font-weight:700;
+}
+
+/* ===== CTA ===== */
+.cta{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:calc(120*var(--p));
+  border:0;border-radius:calc(16*var(--p));
+  background:linear-gradient(135deg,#f0b90b,#fcd535);
+  color:#0a0a0a;
+  font-family:inherit;
+  font-size:calc(44*var(--p));font-weight:700;
+  cursor:pointer;letter-spacing:.01em;
+  box-shadow:0 6px 24px var(--glow);
+  transition:transform .15s, box-shadow .2s, opacity .2s;
+  position:relative;overflow:hidden;
+}
+.cta:hover{transform:translateY(-1px);box-shadow:0 10px 30px var(--glow)}
+.cta:active{transform:translateY(0)}
+.cta:disabled{opacity:.65;cursor:not-allowed;transform:none}
+.cta::after{
+  content:'';position:absolute;top:0;left:-120%;
+  width:55%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:skewX(-20deg);
+  animation:shine 4s ease-in-out infinite;
+  pointer-events:none;
+}
+.cta.ghost{
+  background:transparent;color:var(--yellow);
+  border:calc(2*var(--p)) solid rgba(240,185,11,0.4);
+  box-shadow:none;margin-top:calc(18*var(--p));
+}
+.cta.ghost::after{display:none}
+.cta.ghost:hover{background:rgba(240,185,11,0.06);border-color:rgba(240,185,11,0.6)}
+@keyframes shine{0%,60%{left:-120%}100%{left:170%}}
+
+/* ===== ALERTS ===== */
+.err{
+  display:none;
+  color:var(--red);
+  font-size:calc(32*var(--p));
+  line-height:1.5;
+  margin:0 0 calc(28*var(--p));
+  padding:calc(18*var(--p)) calc(24*var(--p));
+  background:rgba(242,54,69,0.08);
+  border-left:calc(3*var(--p)) solid var(--red);
+  border-radius:calc(8*var(--p));
+}
+
+/* ===== VERIFY STEP ===== */
+.verify-title{
+  text-align:center;
+  font-size:calc(46*var(--p));
+  font-weight:800;
+  color:#fff;
+  margin:0 0 calc(16*var(--p));
+  line-height:1.2;
+}
+.verify-title .accent{
+  background:linear-gradient(90deg,#f0b90b,#fcd535);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.verify-desc{
+  text-align:center;
+  color:#9b9ba3;
+  font-size:calc(34*var(--p));
+  line-height:1.55;
+  margin:0 0 calc(44*var(--p));
+}
+.verify-desc strong{color:var(--yellow);font-weight:700}
+
+/* ===== BOTTOM ===== */
+.bottom-info{
+  margin:calc(44*var(--p)) 0 0;
+  padding:calc(36*var(--p));
+  border:calc(2*var(--p)) solid var(--border);
+  border-radius:calc(16*var(--p));
+  text-align:center;
+  font-size:calc(34*var(--p));
+  color:#b8b8c0;
+  background:rgba(240,185,11,0.03);
+}
+.bottom-info a{color:var(--yellow);text-decoration:none;font-weight:700}
+.bottom-info a:hover{text-decoration:underline}
+.legal{
+  font-size:calc(28*var(--p));
+  line-height:1.55;
+  color:var(--dim);
+  margin:calc(36*var(--p)) 0 calc(20*var(--p));
+  text-align:center;
+}
+.legal a{color:var(--yellow);text-decoration:none;font-weight:500}
+.legal a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 
-<!-- LOADER -->
-<div class="global-loader-overlay" id="globalLoader" aria-live="polite" aria-label="Loading transaction history">
-  <div class="loader-spinner">
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-  </div>
-  <div class="loader-title">LEDGER</div>
-  <div class="loader-sub">Loading your transaction history…</div>
+<!-- X EXIT BUTTON -->
+<a href="index.html" class="x-exit" aria-label="Close and return to home">
+  <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+</a>
+
+<div class="loader-overlay" id="globalLoader">
+  <div class="spinner"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
 </div>
 
-<!-- HEADER -->
-<div class="page-header">
-  <div class="back-btn" onclick="window.location.href='dashboard.html'" role="button" aria-label="Back to dashboard" tabindex="0">
-    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-  </div>
-  <div class="page-header-info">
-    <h2>Transaction History</h2>
-    <p>Complete record of all your account activity</p>
-  </div>
-</div>
+<div class="page">
 
-<div class="container">
-  <div class="history-stats-bar" id="historyStatsBar">
-    <div class="history-stat-pill total active" data-f="all"><span class="pill-dot"></span>Total <span class="pill-count" id="countTotal">0</span></div>
-    <div class="history-stat-pill approved" data-f="approved"><span class="pill-dot"></span>Approved <span class="pill-count" id="countApproved">0</span></div>
-    <div class="history-stat-pill pending" data-f="pending"><span class="pill-dot"></span>Pending <span class="pill-count" id="countPending">0</span></div>
-    <div class="history-stat-pill rejected" data-f="rejected"><span class="pill-dot"></span>Rejected <span class="pill-count" id="countRejected">0</span></div>
-  </div>
+  <header class="hero">
+    <div class="hero-stars"></div>
 
-  <div class="history-list" id="tradeHistoryList"></div>
-
-  <div class="premium-pagination" id="paginationBar" style="display:none">
-    <div class="pagination-info" id="paginationInfo">Showing <strong>0</strong> of <strong>0</strong></div>
-    <div class="pagination-controls">
-      <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)" disabled><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Prev</button>
-      <button class="page-btn" id="nextPageBtn" onclick="changePage(1)" disabled>Next <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-label="Ledger Smart Market">
+        <defs>
+          <linearGradient id="lgMetal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fcd535"/><stop offset=".55" stop-color="#f0b90b"/><stop offset="1" stop-color="#b98a08"/>
+          </linearGradient>
+          <linearGradient id="lgBg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#26262b"/><stop offset="1" stop-color="#050505"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#lgBg)" stroke="url(#lgMetal)" stroke-width="1.6"/>
+        <rect x="6.5" y="6.5" width="51" height="51" rx="12" fill="none" stroke="#f0b90b" stroke-opacity=".28" stroke-width="1"/>
+        <path d="M21 15 V47 H46" fill="none" stroke="url(#lgMetal)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 40 L34 33 L39 37 L47 26" fill="none" stroke="#fcd535" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="47" cy="26" r="2.8" fill="#ffffff"/>
+      </svg>
+      <div class="brand-text">
+        <div class="brand-word">LEDGER</div>
+        <div class="brand-sub">Smart Market</div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- RECEIPT -->
-<div class="modal-overlay" id="receiptModal" onclick="if(event.target===this)closeReceipt()">
-  <div class="receipt-wrap" role="dialog" aria-modal="true" aria-label="Transaction receipt">
-    <div class="receipt-top"><h3>Transaction receipt</h3><button class="close-modal" onclick="closeReceipt()" aria-label="Close">&times;</button></div>
-    <div class="receipt" id="receiptBody"></div>
-    <div class="r-tear"></div>
-    <div class="receipt-actions">
-      <button class="btn-ghost" onclick="copyRef()"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy reference</button>
-      <button class="btn-primary" onclick="downloadReceipt()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Download receipt</button>
+    <p class="have">Already a member? <a href="login.html">Sign in</a></p>
+
+    <h1>Join <span class="accent">Ledger</span></h1>
+    <p class="lead">Create your trading account in under a minute and start accessing global markets.</p>
+
+    <svg class="mascot" viewBox="0 0 236 236" aria-hidden="true">
+      <defs>
+        <radialGradient id="coinG" cx="62%" cy="62%" r="70%">
+          <stop offset="0" stop-color="#fcd535"/><stop offset=".5" stop-color="#f0b90b"/><stop offset="1" stop-color="#b98a08"/>
+        </radialGradient>
+        <linearGradient id="coinE" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fcd535"/><stop offset="1" stop-color="#b98a08"/>
+        </linearGradient>
+      </defs>
+      <path d="M30 108 Q22 56 38 14 Q44 6 54 12 L92 44 Q118 36 146 46 L176 22 Q184 18 188 26 Q196 50 190 82 Q216 104 214 138 Q210 190 150 214 Q96 232 58 196 Q34 168 30 108Z" fill="url(#coinG)"/>
+      <path d="M46 20 L84 50 Q62 60 48 84Z" fill="url(#coinE)" opacity=".55"/>
+      <ellipse cx="172" cy="116" rx="16" ry="21" fill="#1a1200"/>
+      <ellipse cx="176" cy="107" rx="5.5" ry="7" fill="#fff"/>
+      <ellipse cx="205" cy="108" rx="5" ry="9" fill="#1a1200" opacity=".85"/>
+      <path d="M186 160 Q198 164 208 156" stroke="#8a6400" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+  </header>
+
+  <main class="card">
+
+    <div class="step active" id="step1">
+      <h2>Create your <span class="accent">account</span></h2>
+
+      <button class="sso" type="button" id="google">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/>
+          <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/>
+          <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <button class="sso" type="button" id="apple">
+        <svg viewBox="0 0 24 28" aria-hidden="true" fill="currentColor">
+          <path d="M19.6 14.9c0-3 2.5-4.5 2.6-4.6-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-.9 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.1 3.7-.5 9.2 1.5 12.2 1 1.5 2.2 3.1 3.8 3 1.5-.1 2.1-1 3.9-1s2.4 1 4 1c1.7 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.3 1.7-3.4-.1 0-3.2-1.2-3.2-4.9zM16.6 5.9c.8-1 1.4-2.4 1.2-3.9-1.2.1-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.7 1.4.1 2.8-.7 3.7-1.6z"/>
+        </svg>
+        Continue with Apple
+      </button>
+
+      <div class="or"><span>or</span></div>
+
+      <form id="registerForm" novalidate>
+        <label for="regFullName">Full name</label>
+        <input id="regFullName" type="text" placeholder="John Smith" autocomplete="name" required>
+
+        <label for="regUsername">Username</label>
+        <input id="regUsername" type="text" placeholder="johnsmith" autocomplete="username" autocapitalize="none" required>
+
+        <label for="regEmail">Email address</label>
+        <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" autocapitalize="none" required>
+
+        <label for="regPhone">Phone number</label>
+        <input id="regPhone" type="tel" placeholder="+1 555 000 0000" autocomplete="tel" required>
+
+        <label for="regPassword">Password</label>
+        <input id="regPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password" minlength="6" required>
+
+        <label for="regCountry">Country</label>
+        <select id="regCountry" required>
+          <option value="" disabled selected>Select your country</option>
+          <option value="United States">United States</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="Canada">Canada</option>
+          <option value="Australia">Australia</option>
+          <option value="Germany">Germany</option>
+          <option value="France">France</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <p class="err" id="regErr"></p>
+        <button type="submit" class="cta" id="signupBtn"><span id="signupBtnText">Create account</span></button>
+      </form>
+
+      <p class="bottom-info">Already have an account? <a href="login.html">Sign in</a></p>
+      <p class="legal">By creating an account you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
     </div>
-  </div>
+
+    <div class="step" id="step2">
+      <h2 class="verify-title">Verify your <span class="accent">email</span></h2>
+      <p class="verify-desc">We sent a 6-digit verification code to<br><strong id="verifyEmail">your email</strong></p>
+
+      <form id="verifyForm" novalidate>
+        <label for="verifyCode">Verification code</label>
+        <input id="verifyCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required>
+
+        <p class="err" id="verifyErr"></p>
+        <button type="submit" class="cta" id="verifyBtn"><span id="verifyBtnText">Verify &amp; create account</span></button>
+        <button type="button" class="cta ghost" onclick="goStep(1)">Back to edit details</button>
+      </form>
+    </div>
+
+  </main>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const API_BASE_URL = 'https://apexline-market.onrender.com';
 
-const userStr = localStorage.getItem('nexoraUser');
-if (!userStr) { window.location.replace('index.html'); throw new Error('Not authenticated'); }
-let currentUser;
-try { currentUser = JSON.parse(userStr); }
-catch (e) {
-  ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'].forEach(k => localStorage.removeItem(k));
-  window.location.replace('index.html'); throw new Error('Invalid auth state');
-}
-
 const loader = document.getElementById('globalLoader');
-const showLoader = () => loader.classList.remove('hide');
-const hideLoader = () => loader.classList.add('hide');
+const showLoader = () => loader.classList.add('active');
+const hideLoader = () => loader.classList.remove('active');
 
-const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-
-/* ---------- Currency (matches dashboard getCurrencyData) ---------- */
-let currencySym = '$', currencyCode = 'USD';
-(function () {
-  if (currentUser && currentUser.currency && currentUser.currency.symbol) {
-    currencyCode = currentUser.currency.code || 'USD';
-    currencySym = currentUser.currency.symbol || '$';
-    return;
-  }
-  const map = {
-    'France':['€','EUR'],'Germany':['€','EUR'],'Spain':['€','EUR'],'Italy':['€','EUR'],'Portugal':['€','EUR'],
-    'Netherlands':['€','EUR'],'Belgium':['€','EUR'],'Austria':['€','EUR'],'Ireland':['€','EUR'],
-    'United Kingdom':['£','GBP'],'Canada':['C$','CAD'],'Australia':['A$','AUD'],'Japan':['¥','JPY'],'Nigeria':['₦','NGN']
-  };
-  const m = currentUser && map[currentUser.country];
-  if (m) { currencySym = m[0]; currencyCode = m[1]; }
-})();
-
-/* ---------- Sound Engine (No external files, 100% reliable) ---------- */
-function playSuccessSound() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-
-    const playBeep = (freq, startTime, duration) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
-      
-      gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + duration);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start(ctx.currentTime + startTime);
-      osc.stop(ctx.currentTime + startTime + duration);
-    };
-
-    playBeep(1200, 0, 0.1);
-    playBeep(1600, 0.12, 0.15);
-  } catch (e) {
-    console.warn("Audio play failed:", e);
-  }
+if (localStorage.getItem('nexoraUser')) {
+  window.location.replace('dashboard.html');
 }
 
-/* ---------- Type metadata ---------- */
-const CREDIT_TYPES = new Set(['Deposit','Copy In','Bonus','Refund','Profit','Referral Bonus']);
-// ✅ Using the original DEBIT_TYPES without 'Trade Result'
-const DEBIT_TYPES  = new Set(['Withdrawal','Copy Out','Trade','Crypto','Forex']); 
-const COPY_SVG = '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>';
-const TRADE_SVG = '<path d="M3 3v18h18M7 14l4-4 4 4 5-6"/>';
-const GIFT_SVG = '<path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>';
-const TYPE_META = {
-  'Deposit':        { iconClass:'deposit',    svg:'<path d="M12 19V5M5 12l7-7 7 7"/>', label:'Deposit', sublabel:'Funds Added' },
-  'Withdrawal':     { iconClass:'withdrawal', svg:'<path d="M12 5v14M5 12l7 7 7-7"/>', label:'Withdrawal', sublabel:'Funds Out' },
-  'Trade':          { iconClass:'trade',      svg:TRADE_SVG, label:'Trade', sublabel:'Market Order' },
-  'Crypto':         { iconClass:'trade',      svg:TRADE_SVG, label:'Crypto Trade', sublabel:'Market Order' },
-  'Forex':          { iconClass:'trade',      svg:TRADE_SVG, label:'Forex Trade', sublabel:'Market Order' },
-  'Copy Trade':     { iconClass:'copytrade',  svg:COPY_SVG,  label:'Copy Trade', sublabel:'Copy Trading' },
-  'Copy Out':       { iconClass:'copyout',    svg:COPY_SVG,  label:'Copy Trade Started', sublabel:'Funds Invested' },
-  'Copy In':        { iconClass:'copyin',     svg:'<path d="M20 4L4 20M15 20h5v-5M4 4h5v5"/>', label:'Copy Trade Closed', sublabel:'Funds Returned' },
-  'Referral Bonus': { iconClass:'bonus',      svg:GIFT_SVG,   label:'Referral Bonus', sublabel:'Reward' },
-  'Bonus':          { iconClass:'bonus',      svg:GIFT_SVG,   label:'Bonus', sublabel:'Reward' },
-  'Profit':         { iconClass:'bonus',      svg:GIFT_SVG,   label:'Profit Credited', sublabel:'Earnings' },
-  'Refund':         { iconClass:'deposit',    svg:'<path d="M12 19V5M5 12l7-7 7 7"/>', label:'Refund', sublabel:'Funds Returned' },
-  'Trade Result':   { iconClass:'trade',      svg:TRADE_SVG, label:'Trade Result', sublabel:'Closed Position' } 
-};
-const getTypeMeta = type => TYPE_META[type] || { iconClass:'trade', svg:'<path d="M3 3v18h18M9 9l6 6M15 9l-6 6"/>', label:type || 'Transaction', sublabel:'Transaction' };
+let pendingEmail = '';
 
-// ✅ FIX: Back to reading the amount as a positive number for all credits. 
-// Since 'Trade Result' is no longer in DEBIT_TYPES, it will default to the amount logic, which is exactly what we want.
-const isCredit = t => CREDIT_TYPES.has(t.type) ? true : DEBIT_TYPES.has(t.type) ? false : Number(t.amount) >= 0;
-
-// ✅ FIX: Use Math.abs() to strip negative signs and display the full amount.
-const amtDisplay = t => {
-  const raw = String(t.amount_display || t.amount || '0').replace(/,/g, '');
-  return Math.abs(parseFloat(raw) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-const statusOf = t => (t.status || 'Approved').toLowerCase();
-const refOf = t => 'APX-' + (t.id != null ? String(t.id).toUpperCase().padStart(8, '0') : new Date(t.created_at).getTime().toString(36).toUpperCase());
-
-/* ---------- State ---------- */
-let allTransactions = [];
-let viewList = [];
-let currentPage = 1;
-let statusFilter = 'all';
-let lastFetchedTopId = null; 
-const PAGE_SIZE = 5;
-
-/* ---------- Fetch ---------- */
-async function fetchAllTrades(isPoll = false) {
-  const listContainer = document.getElementById('tradeHistoryList');
-  try {
-    const response = await fetch(`${API_BASE_URL}/transactions/${currentUser.id}`);
-    const data = await response.json();
-    if (!data.success || !data.transactions) throw new Error('bad response');
-
-    const sorted = data.transactions.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    // Sound trigger logic
-    if (isPoll && sorted.length > 0) {
-        const newestId = sorted[0].id;
-        if (lastFetchedTopId !== null && newestId !== lastFetchedTopId) {
-            const newestType = sorted[0].type;
-            if (['Trade Result', 'Profit', 'Copy In'].includes(newestType)) {
-                playSuccessSound();
-                toast(`New ${getTypeMeta(newestType).label} added to history!`);
-            }
-        }
-        lastFetchedTopId = newestId;
-    } else if (!isPoll && sorted.length > 0) {
-        lastFetchedTopId = sorted[0].id;
-    }
-
-    allTransactions = sorted;
-    document.getElementById('countTotal').innerText = allTransactions.length;
-    document.getElementById('countApproved').innerText = allTransactions.filter(t => statusOf(t) === 'approved').length;
-    document.getElementById('countPending').innerText = allTransactions.filter(t => statusOf(t) === 'pending').length;
-    document.getElementById('countRejected').innerText = allTransactions.filter(t => statusOf(t) === 'rejected').length;
-    
-    if (!isPoll || viewList.length !== allTransactions.length) {
-        applyFilter();
-    }
-
-  } catch (error) {
-    if (!isPoll) {
-        console.error('Failed to fetch trades:', error);
-        document.getElementById('paginationBar').style.display = 'none';
-        listContainer.innerHTML = `<div class="empty-state" style="color:var(--primary-red)"><p>Failed to load your transactions.</p><button onclick="retry()">Try again</button></div>`;
-    }
-  } finally {
-    if (!isPoll) hideLoader();
-  }
-}
-function retry() { showLoader(); fetchAllTrades(); }
-
-function applyFilter() {
-  viewList = statusFilter === 'all' ? allTransactions : allTransactions.filter(t => statusOf(t) === statusFilter);
-  if (!allTransactions.length) {
-    document.getElementById('paginationBar').style.display = 'none';
-    document.getElementById('tradeHistoryList').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><p>No trades yet. Your history will appear here.</p></div>`;
-    return;
-  }
-  if (!viewList.length) {
-    document.getElementById('paginationBar').style.display = 'none';
-    document.getElementById('tradeHistoryList').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg><p>No ${esc(statusFilter)} transactions.</p></div>`;
-    return;
-  }
-  document.getElementById('paginationBar').style.display = 'flex';
-  renderTradePage(currentPage);
-}
-
-/* ---------- Render page ---------- */
-function renderTradePage(page) {
-  const listContainer = document.getElementById('tradeHistoryList');
-  const totalPages = Math.max(1, Math.ceil(viewList.length / PAGE_SIZE));
-  if (page < 1) page = 1;
-  if (page > totalPages) page = totalPages;
-  currentPage = page;
-
-  const startIdx = (page - 1) * PAGE_SIZE;
-  const endIdx = Math.min(startIdx + PAGE_SIZE, viewList.length);
-  const pageItems = viewList.slice(startIdx, endIdx);
-
-  listContainer.innerHTML = pageItems.map(txn => {
-    const d = new Date(txn.created_at);
-    const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    const time = d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-    const meta = getTypeMeta(txn.type);
-    const credit = isCredit(txn);
-    const status = statusOf(txn);
-    return `
-      <button class="history-card" data-idx="${allTransactions.indexOf(txn)}" aria-label="View receipt for ${esc(meta.label)}">
-        <div class="hc-top">
-          <div class="hc-type-wrap">
-            <div class="hc-icon ${meta.iconClass}"><svg viewBox="0 0 24 24">${meta.svg}</svg></div>
-            <div class="hc-type-text"><h4>${esc(meta.label)}</h4><span>${esc(meta.sublabel)}</span></div>
-          </div>
-          <div class="hc-amount ${credit ? 'positive' : 'negative'}">${credit ? '+' : '-'}${esc(currencySym)}${esc(amtDisplay(txn))}</div>
-        </div>
-        <div class="hc-bottom">
-          <div class="hc-date"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${esc(date)} • ${esc(time)}</div>
-          <div class="hc-right">
-            <span class="hc-receipt">Receipt <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
-            <span class="premium-badge ${esc(status)}">${esc(txn.status || 'Approved')}</span>
-          </div>
-        </div>
-      </button>`;
-  }).join('');
-
-  document.getElementById('prevPageBtn').disabled = page <= 1;
-  document.getElementById('nextPageBtn').disabled = page >= totalPages;
-  document.getElementById('paginationInfo').innerHTML = `Showing <strong>${startIdx + 1}–${endIdx}</strong> of <strong>${viewList.length}</strong> transactions`;
-}
-
-function changePage(direction) {
-  const totalPages = Math.ceil(viewList.length / PAGE_SIZE);
-  const newPage = currentPage + direction;
-  if (newPage < 1 || newPage > totalPages) return;
-  renderTradePage(newPage);
+function goStep(n){
+  document.getElementById('step1').classList.toggle('active', n === 1);
+  document.getElementById('step2').classList.toggle('active', n === 2);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ---------- Receipt ---------- */
-let activeTxn = null;
-const CHECK = '<path d="M5 13l4 4L19 7"/>', CLOCK = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', CROSS = '<path d="M6 6l12 12M18 6L6 18"/>';
+const signupBtn = document.getElementById('signupBtn');
+const signupBtnText = document.getElementById('signupBtnText');
+const verifyBtn = document.getElementById('verifyBtn');
+const verifyBtnText = document.getElementById('verifyBtnText');
+const regErr = document.getElementById('regErr');
+const verifyErr = document.getElementById('verifyErr');
+const verifyEmailEl = document.getElementById('verifyEmail');
 
-function openReceipt(t) {
-  activeTxn = t;
-  const desc = String(t.description || '');
-  const meta = Object.assign({}, getTypeMeta(t.type));
-  if (t.type === 'Withdrawal' && /^Bank Withdrawal/i.test(desc)) meta.label = 'Bank Withdrawal';
-  const s = statusOf(t), credit = isCredit(t);
-  const d = new Date(t.created_at);
-  const dateStr = isNaN(d) ? '—' : d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-  const timeStr = isNaN(d) ? '—' : d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  const stLabel = s === 'approved' ? 'Completed' : s === 'pending' ? 'Pending' : 'Rejected';
-  const stIcon = s === 'approved' ? CHECK : s === 'pending' ? CLOCK : CROSS;
-  
-  // ✅ FIX: Standardize the amount back to reading the whole amount
-  const amount = amtDisplay(t);
-
-  const extra = [];
-  const add = (label, v) => { if (v !== undefined && v !== null && String(v).trim() !== '') extra.push([label, v]); };
-  const methodRaw = String(t.method || t.payment_method || '');
-  add('Method', /admin/i.test(methodRaw) ? '' : methodRaw);
-  add('Network', t.network);
-  add('Wallet / account', t.address || t.wallet_address || t.account);
-  add('Pair', t.pair);
-  add('Direction', t.action);
-  add('Lot size', t.lot_size);
-  add('Stop loss', t.stop_loss);
-  const noteRaw = String(t.note || t.description || t.reason || '');
-  add('Note', /admin/i.test(noteRaw) ? '' : noteRaw);
-
-  const row = (k, v, cls) => `<div class="r-row"><span>${esc(k)}</span><span class="${cls || ''}">${esc(v)}</span></div>`;
-
-  document.getElementById('receiptBody').innerHTML = `
-    <div class="r-brand">
-      <div><div class="name">LEDGER</div><div class="sub">SMART MARKET</div></div>
-      <div class="doc">OFFICIAL RECEIPT</div>
-    </div>
-    <div class="r-status ${esc(s)}">
-      <div class="ico"><svg viewBox="0 0 24 24">${stIcon}</svg></div>
-      <div class="st">${stLabel}</div>
-      <div class="r-amount">${credit ? '+' : '-'}${esc(currencySym)}${esc(amount)}</div>
-      <div class="r-type">${esc(meta.label)}</div>
-    </div>
-    <div class="r-rows">
-      ${row('Reference', refOf(t), 'ref')}
-      ${row('Date', dateStr)}
-      ${row('Time', timeStr)}
-      ${row('Account holder', currentUser.full_name || '—')}
-      ${currentUser.email ? row('Email', currentUser.email) : ''}
-      ${row('Type', meta.label)}
-      ${row('Status', t.status || 'Approved')}
-      ${row('Currency', currencyCode)}
-      ${extra.map(([k, v]) => row(k, v)).join('')}
-    </div>
-    <div class="r-total"><span>${credit ? 'Amount credited' : 'Amount debited'}</span><span>${esc(currencySym)}${esc(amount)}</span></div>
-    <div class="r-foot">
-      ${s === 'pending' ? 'This transaction is awaiting approval. Your balance will update once it is processed.<br>' : ''}
-      ${s === 'rejected' ? 'This transaction was not approved. Contact support if you need help.<br>' : ''}
-      Generated ${esc(new Date().toLocaleString('en-US'))}<br>Keep this receipt for your records.
-    </div>`;
-  document.getElementById('receiptModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+function showError(el, msg){
+  el.textContent = msg;
+  el.style.display = 'block';
 }
-async function downloadReceipt() {
-  if (!activeTxn) return;
-  if (typeof html2canvas === 'undefined') { toast('Download tool failed to load. Refresh and try again.'); return; }
-  const name = 'receipt-' + refOf(activeTxn) + '.png';
-  try {
-    toast('Preparing receipt...');
-    const canvas = await html2canvas(document.getElementById('receiptBody'), { backgroundColor: '#ffffff', scale: 2, useCORS: true });
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-    if (!blob) throw new Error('Image could not be created');
-    const file = new File([blob], name, { type: 'image/png' });
 
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Receipt' }); return; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  regErr.style.display = 'none';
+
+  const payload = {
+    fullName: document.getElementById('regFullName').value.trim(),
+    username: document.getElementById('regUsername').value.trim(),
+    email: document.getElementById('regEmail').value.trim(),
+    phone: document.getElementById('regPhone').value.trim(),
+    password: document.getElementById('regPassword').value,
+    country: document.getElementById('regCountry').value,
+    referred_by: new URLSearchParams(location.search).get('ref') || localStorage.getItem('nexoraReferral') || null
+  };
+
+  if (!payload.fullName) return showError(regErr, 'Enter your full name.');
+  if (!payload.username) return showError(regErr, 'Choose a username.');
+  if (!payload.email.includes('@')) return showError(regErr, 'Enter a valid email address.');
+  if (!payload.phone) return showError(regErr, 'Enter your phone number.');
+  if (payload.password.length < 6) return showError(regErr, 'Password must be at least 6 characters.');
+  if (!payload.country) return showError(regErr, 'Select your country.');
+
+  signupBtn.disabled = true;
+  signupBtnText.textContent = 'Creating account…';
+  showLoader();
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/signup/send-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    hideLoader();
+
+    if (!data.success) {
+      showError(regErr, data.message || 'Registration failed. Please check your details.');
+      signupBtn.disabled = false;
+      signupBtnText.textContent = 'Create account';
+      return;
     }
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  } catch (e) {
-    console.error('Receipt download failed:', e);
-    toast('Download failed: ' + (e && e.message ? e.message : 'unknown error'));
+    pendingEmail = payload.email;
+    verifyEmailEl.textContent = payload.email;
+    document.getElementById('verifyCode').value = '';
+    verifyErr.style.display = 'none';
+    goStep(2);
+
+    signupBtn.disabled = false;
+    signupBtnText.textContent = 'Create account';
+
+  } catch (err) {
+    hideLoader();
+    showError(regErr, 'Unable to connect. Please try again.');
+    signupBtn.disabled = false;
+    signupBtnText.textContent = 'Create account';
   }
-}
-function closeReceipt() {
-  document.getElementById('receiptModal').classList.remove('active');
-  document.body.style.overflow = '';
-  activeTxn = null;
-}
-function copyRef() {
-  if (!activeTxn) return;
-  const ref = refOf(activeTxn);
-  const done = () => toast('Reference copied');
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ref).then(done).catch(() => fallbackCopy(ref, done));
-  else fallbackCopy(ref, done);
-}
-function fallbackCopy(text, cb) {
-  const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
-  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); cb(); } catch (e) {} ta.remove();
-}
-function toast(msg) {
-  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
-  document.body.appendChild(el); setTimeout(() => el.remove(), 2200);
-}
-
-/* ---------- Events ---------- */
-document.getElementById('tradeHistoryList').addEventListener('click', e => {
-  const card = e.target.closest('.history-card'); if (!card) return;
-  const t = allTransactions[Number(card.dataset.idx)]; if (t) openReceipt(t);
-});
-document.getElementById('historyStatsBar').addEventListener('click', e => {
-  const pill = e.target.closest('.history-stat-pill'); if (!pill) return;
-  document.querySelectorAll('.history-stat-pill').forEach(p => p.classList.toggle('active', p === pill));
-  statusFilter = pill.dataset.f;
-  applyFilter();
-});
-document.querySelector('.back-btn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') window.location.href = 'dashboard.html'; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReceipt(); });
-
-window.addEventListener('load', () => {
-  const minShow = new Promise(r => setTimeout(r, 700));
-  Promise.all([fetchAllTrades(), minShow]);
 });
 
-// Poll every 10 seconds to check for new trades and play sound
-setInterval(() => {
-    if (document.hidden) return;
-    fetchAllTrades(true);
-}, 10000);
+document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  verifyErr.style.display = 'none';
 
+  const code = document.getElementById('verifyCode').value.trim();
+  if (code.length !== 6) return showError(verifyErr, 'Enter the 6-digit code.');
+
+  verifyBtn.disabled = true;
+  verifyBtnText.textContent = 'Verifying…';
+  showLoader();
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/signup/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingEmail, code })
+    });
+    const data = await res.json();
+    hideLoader();
+
+    if (!res.ok || !data.success) {
+      showError(verifyErr, data.message || 'Invalid or expired code.');
+      verifyBtn.disabled = false;
+      verifyBtnText.textContent = 'Verify & create account';
+      return;
+    }
+
+    try {
+      const loginRes = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingEmail, password: document.getElementById('regPassword').value })
+      });
+      const loginData = await loginRes.json();
+      if (loginData.success) {
+        localStorage.setItem('nexoraUser', JSON.stringify(loginData.user));
+        localStorage.setItem('nexoraToken', loginData.token || 'true');
+        verifyBtnText.textContent = 'Success! Redirecting…';
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+        return;
+      }
+    } catch (loginErr) {}
+
+    verifyBtnText.textContent = 'Account created!';
+    setTimeout(() => { window.location.href = 'login.html'; }, 800);
+
+  } catch (err) {
+    hideLoader();
+    showError(verifyErr, 'Unable to connect. Please try again.');
+    verifyBtn.disabled = false;
+    verifyBtnText.textContent = 'Verify & create account';
+  }
+});
+
+document.getElementById('verifyCode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verifyBtn.click();
+});
+
+document.getElementById('google').addEventListener('click', async () => {
+  showLoader();
+  try {
+    const SUPABASE_URL = 'https://pjxhrnivrhnnnbpnduwh.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_8yA4Ly2r0P2LfP17Nl-Omg_5q3pfkhN';
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/auth-callback.html', queryParams: { prompt: 'select_account' } }
+    });
+  } catch (err) {
+    hideLoader();
+    regErr.textContent = 'Unable to connect to Google.';
+    regErr.style.display = 'block';
+  }
+});
+
+document.getElementById('apple').addEventListener('click', () => {
+  regErr.textContent = 'Apple Sign-In is coming soon.';
+  regErr.style.display = 'block';
+});
 </script>
 </body>
 </html>
