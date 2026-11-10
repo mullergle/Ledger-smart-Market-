@@ -55,7 +55,6 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); -webkit-tap-highlight-color: transparent; }
         
-        /* ✅ Removed white space and bounce effect */
         html, body { 
             margin: 0; 
             padding: 0; 
@@ -210,37 +209,124 @@
         .page-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; color: #ffffff; letter-spacing: -0.5px; }
         .page-subtitle { font-size: 14px; color: var(--text-gray); margin-bottom: 25px; line-height: 1.5; }
 
+        /* ✅ NEW: Minimum Notice Banner */
+        .min-notice-banner {
+            background: linear-gradient(90deg, rgba(240,185,11,0.1), rgba(240,185,11,0.02));
+            border-left: 3px solid var(--primary-bright);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+        .min-notice-banner svg { width: 18px; height: 18px; stroke: var(--primary-bright); fill: none; stroke-width: 2.5; flex-shrink: 0; }
+        .min-notice-banner strong { color: var(--primary-bright); font-weight: 700; }
+
         .copy-trading-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 40px; }
         @media (min-width: 600px) { .copy-trading-grid { grid-template-columns: repeat(2, 1fr); } }
         
-        .trader-card { background: linear-gradient(160deg, #0f0f12, #17171b); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
-        .trader-card:hover { border-color: rgba(240,185,11,0.4); transform: translateY(-3px); box-shadow: 0 15px 40px rgba(0,0,0,0.5), 0 0 30px rgba(240,185,11,0.05); }
-        .trader-card::before { content: ''; position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(240,185,11,0.08) 0%, transparent 70%); border-radius: 50%; z-index: 0; pointer-events: none; }
+        /* ============ PROFESSIONAL TRADER CARD ============ */
+        .trader-card { 
+            background: linear-gradient(145deg, #111111, #050505); 
+            border: 1px solid rgba(240,185,11,0.15); 
+            border-radius: 16px; 
+            padding: 22px; 
+            position: relative; 
+            overflow: hidden; 
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .trader-card:hover { 
+            border-color: rgba(240,185,11,0.5); 
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(240,185,11,0.1);
+        }
+        .trader-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: linear-gradient(to bottom, #fcd535, #b98a08);
+            opacity: 0.8;
+        }
         
-        .trader-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; position: relative; z-index: 1; }
-        .trader-avatar { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-bright); padding: 2px; background: var(--bg-dark); flex-shrink: 0; box-shadow: 0 0 15px rgba(240,185,11,0.2); }
+        .trader-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; position: relative; z-index: 1; }
+        
+        .avatar-wrap { position: relative; flex-shrink: 0; }
+        .trader-avatar { width: 54px; height: 54px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-bright); padding: 2px; background: var(--bg-dark); box-shadow: 0 0 15px rgba(240,185,11,0.15); }
         .trader-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .trader-info h3 { font-size: 17px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; }
+        .online-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #2ecc71; border-radius: 50%; border: 2px solid #111; }
+        
+        .trader-info { flex: 1; min-width: 0; }
+        .trader-info h3 { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: #fff; letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px; }
+        .trader-info h3 svg { width: 14px; height: 14px; fill: var(--primary-teal); }
+        
         .trader-badge { background: rgba(30, 187, 163, 0.15); color: var(--primary-teal); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; }
         .trader-badge.pro { background: rgba(240,185,11,0.15); color: #fcd535; }
         .trader-badge.legend { background: rgba(242, 54, 69, 0.15); color: var(--primary-red); }
         
-        .trader-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; position: relative; z-index: 1; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
-        .t-stat { display: flex; flex-direction: column; gap: 4px; }
-        .t-label { font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .t-val { font-size: 15px; font-weight: 700; color: var(--text-white); }
+        .trader-stats { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+            margin-bottom: 22px; 
+            position: relative; 
+            z-index: 1; 
+            background: rgba(0,0,0,0.3); 
+            padding: 16px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.03); 
+        }
+        .t-stat { display: flex; flex-direction: column; gap: 2px; }
+        .t-label { font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .t-label svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .t-val { font-size: 15px; font-weight: 700; color: var(--text-white); font-variant-numeric: tabular-nums; }
         .text-green { color: var(--primary-teal); text-shadow: 0 0 10px rgba(30,187,163,0.3); }
         
         .copy-action { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; margin-top: auto; }
-        .copy-amount { width: 100%; padding: 14px 15px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-size: 15px; outline: none; transition: all 0.2s; }
+        .copy-amount { 
+            width: 100%; 
+            padding: 14px 15px; 
+            background: #141414; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            color: white; 
+            font-size: 15px; 
+            outline: none; 
+            transition: all 0.2s; 
+        }
         .copy-amount:focus { border-color: var(--primary-bright); box-shadow: 0 0 0 3px rgba(240,185,11,0.15); }
         .copy-amount::placeholder { color: #6c6c75; }
         
-        .btn-copy { width: 100%; background: linear-gradient(135deg, #f0b90b 0%, #fcd535 100%); color: #0a0a0a; font-size: 15px; font-weight: 800; padding: 14px; border-radius: 8px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(240,185,11,0.25); letter-spacing: 0.3px; }
-        .btn-copy:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,185,11,0.35); }
+        .btn-copy { 
+            width: 100%; 
+            background: linear-gradient(90deg, #f0b90b, #fcd535); 
+            color: #000; 
+            font-weight: 800; 
+            font-size: 14px; 
+            padding: 15px; 
+            border-radius: 8px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            transition: all 0.2s; 
+            box-shadow: 0 4px 15px rgba(240,185,11,0.2);
+        }
+        .btn-copy:hover { background: linear-gradient(90deg, #fcd535, #ffe680); box-shadow: 0 6px 20px rgba(240,185,11,0.4); transform: translateY(-1px); }
         .btn-copy:active { transform: scale(0.98); }
         .btn-copy:disabled { cursor: wait; opacity: 0.7; }
-        .btn-copy[data-following="true"] { background: rgba(30, 187, 163, 0.1); color: var(--primary-teal); border: 1px solid var(--primary-teal); box-shadow: none; font-size: 13px; }
+        
+        .btn-copy[data-following="true"] { 
+            background: rgba(30, 187, 163, 0.1); 
+            color: var(--primary-teal); 
+            border: 1px solid var(--primary-teal); 
+            box-shadow: none; 
+            font-size: 13px; 
+            text-transform: none;
+        }
         .btn-copy[data-following="true"]:hover { background: rgba(30, 187, 163, 0.15); }
 
         /* LEDGER aligned to SMART MARKET width */
@@ -351,122 +437,261 @@
         <h2 class="page-title">Copy Trading</h2>
         <p class="page-subtitle">Enter an amount and mirror an expert trader. Your balance will be allocated to the copy trade and grow with their performance.</p>
 
+        <!-- ✅ NEW: Minimum Limit Notice -->
+        <div class="min-notice-banner">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Institutional Copy Trading minimum is <strong>$10,000.00</strong>.</span>
+        </div>
+
         <div class="copy-trading-grid">
+            <!-- TRADER 1 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" alt="Harry Sam"></div>
-                    <div class="trader-info"><h3>HARRY SAM</h3><span class="trader-badge">Expert</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" alt="Harry Sam"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>HARRY SAM <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge">Expert</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">3,928</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">192,824</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">85%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">15%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">3,928</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">192.8k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">85%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">15%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt1">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt1">
                     <button class="btn-copy" onclick="executeCopy('Harry Sam','amt1',event)" data-trader="Harry Sam" data-badge="Expert">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 2 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Elena Rostova"></div>
-                    <div class="trader-info"><h3>ELENA ROSTOVA</h3><span class="trader-badge pro">Pro</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Elena Rostova"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>ELENA ROSTOVA <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge pro">Pro</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">1,204</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">84,102</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">78%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">22%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">1,204</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">84.1k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">78%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">22%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt2">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt2">
                     <button class="btn-copy" onclick="executeCopy('Elena Rostova','amt2',event)" data-trader="Elena Rostova" data-badge="Pro">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 3 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" alt="Marcus Chen"></div>
-                    <div class="trader-info"><h3>MARCUS CHEN</h3><span class="trader-badge legend">Legend</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" alt="Marcus Chen"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>MARCUS CHEN <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge legend">Legend</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">8,502</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">312,050</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">91%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">18%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">8,502</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">312k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">91%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">18%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt3">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt3">
                     <button class="btn-copy" onclick="executeCopy('Marcus Chen','amt3',event)" data-trader="Marcus Chen" data-badge="Legend">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 4 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Sarah Jenkins"></div>
-                    <div class="trader-info"><h3>SARAH JENKINS</h3><span class="trader-badge">Expert</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Sarah Jenkins"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>SARAH JENKINS <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge">Expert</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">2,115</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">105,230</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">82%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">14%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">2,115</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">105.2k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">82%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">14%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt4">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt4">
                     <button class="btn-copy" onclick="executeCopy('Sarah Jenkins','amt4',event)" data-trader="Sarah Jenkins" data-badge="Expert">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 5 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=150&q=80" alt="David Osei"></div>
-                    <div class="trader-info"><h3>DAVID OSEI</h3><span class="trader-badge pro">Pro</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=150&q=80" alt="David Osei"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>DAVID OSEI <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge pro">Pro</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">945</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">42,190</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">75%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">28%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">945</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">42.1k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">75%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">28%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt5">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt5">
                     <button class="btn-copy" onclick="executeCopy('David Osei','amt5',event)" data-trader="David Osei" data-badge="Pro">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 6 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=150&q=80" alt="Yuki Tanaka"></div>
-                    <div class="trader-info"><h3>YUKI TANAKA</h3><span class="trader-badge">Expert</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=150&q=80" alt="Yuki Tanaka"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>YUKI TANAKA <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge">Expert</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">3,401</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">150,400</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">88%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">12%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">3,401</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">150.4k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">88%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">12%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt6">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt6">
                     <button class="btn-copy" onclick="executeCopy('Yuki Tanaka','amt6',event)" data-trader="Yuki Tanaka" data-badge="Expert">Copy Trader</button>
                 </div>
             </div>
 
+            <!-- TRADER 7 -->
             <div class="trader-card">
                 <div class="trader-header">
-                    <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1507591064344-4c6ce005b128?auto=format&fit=crop&w=150&q=80" alt="Alex Volkov"></div>
-                    <div class="trader-info"><h3>ALEX VOLKOV</h3><span class="trader-badge legend">Legend</span></div>
+                    <div class="avatar-wrap">
+                        <div class="trader-avatar"><img src="https://images.unsplash.com/photo-1507591064344-4c6ce005b128?auto=format&fit=crop&w=150&q=80" alt="Alex Volkov"></div>
+                        <div class="online-dot"></div>
+                    </div>
+                    <div class="trader-info">
+                        <h3>ALEX VOLKOV <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></h3>
+                        <span class="trader-badge legend">Legend</span>
+                    </div>
                 </div>
                 <div class="trader-stats">
-                    <div class="t-stat"><span class="t-label">Total Copies</span><span class="t-val">12,882</span></div>
-                    <div class="t-stat"><span class="t-label">Total Trades</span><span class="t-val">450,110</span></div>
-                    <div class="t-stat"><span class="t-label">Win Rates</span><span class="t-val text-green">94%</span></div>
-                    <div class="t-stat"><span class="t-label">ROI</span><span class="t-val text-green">35%</span></div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Copies</span>
+                        <span class="t-val">12.8k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg>Trades</span>
+                        <span class="t-val">450k</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Win Rate</span>
+                        <span class="t-val text-green">94%</span>
+                    </div>
+                    <div class="t-stat">
+                        <span class="t-label"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>ROI</span>
+                        <span class="t-val text-green">35%</span>
+                    </div>
                 </div>
                 <div class="copy-action">
-                    <input type="number" min="1" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt7">
+                    <input type="number" min="10000" step="any" class="copy-amount currency-placeholder" placeholder="Amount ($)" id="amt7">
                     <button class="btn-copy" onclick="executeCopy('Alex Volkov','amt7',event)" data-trader="Alex Volkov" data-badge="Legend">Copy Trader</button>
                 </div>
             </div>
@@ -475,6 +700,7 @@
 
 <script>
         const API_BASE_URL = 'https://apexline-market.onrender.com';
+        const MIN_COPY_AMOUNT = 10000;
 
         const userStr = localStorage.getItem('nexoraUser');
         if (!userStr) { window.location.replace('index.html'); throw new Error('Not authenticated'); }
@@ -864,8 +1090,9 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const cur = getCurrencySymbol();
+            // ✅ UPDATE: Show the $10k minimum in the placeholder
             document.querySelectorAll('.currency-placeholder').forEach(input => {
-                input.placeholder = `Amount (${cur})`;
+                input.placeholder = `Min: ${cur}10,000.00`;
             });
 
             seedLocalEvents();
@@ -959,14 +1186,15 @@
             const inputEl = document.getElementById(inputId);
             const amount = Number(inputEl.value);
 
-            if (!Number.isFinite(amount) || amount <= 0) {
+            // ✅ UPDATE: Frontend validation for $10k min
+            if (!Number.isFinite(amount) || amount < MIN_COPY_AMOUNT) {
                 inputEl.style.borderColor = 'var(--primary-red)';
                 inputEl.style.backgroundColor = 'rgba(242, 54, 69, 0.1)';
                 setTimeout(() => {
                     inputEl.style.borderColor = 'var(--border-color)';
                     inputEl.style.backgroundColor = 'var(--input-bg)';
                 }, 1000);
-                showToast('error', 'Please enter a valid amount to copy this trader.');
+                showToast('error', `The minimum amount to copy a trader is ${cur}${MIN_COPY_AMOUNT.toLocaleString('en-US', {minimumFractionDigits: 2})}.`);
                 inputEl.focus();
                 return;
             }
