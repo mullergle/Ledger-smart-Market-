@@ -1080,8 +1080,10 @@ document.getElementById('google').addEventListener('click', async () => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth-callback.html', queryParams: { prompt: 'select_account' } }
-    });
+      options: {
+  redirectTo: new URL('auth-callback.html', window.location.href).href,
+  queryParams: { prompt: 'select_account' }
+}
   } catch (err) {
     hideLoader();
     showError('Unable to connect to Google.');
