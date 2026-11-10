@@ -1606,8 +1606,9 @@ async function saveUser() {
     payload.trade_id = state.editingTrade.id;
     payload.trade_amount = tr.stake;
     payload.trade_result_amount = tr.result;
-    payload.profit_loss = tr.diff;               // positive = profit, negative = loss
+    payload.profit_loss = tr.diff;               // ✅ Passes the positive/negative P&L
     payload.trade_outcome = tr.outcome;          // 'profit' | 'loss' | 'even'
+    
     if (tr.outcome !== 'even') {
       const word = tr.outcome === 'profit' ? 'profit of +$' : 'loss of -$';
       const ok = await askConfirm(
