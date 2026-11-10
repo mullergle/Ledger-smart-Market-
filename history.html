@@ -290,10 +290,42 @@ let currencySym = '$', currencyCode = 'USD';
   if (m) { currencySym = m[0]; currencyCode = m[1]; }
 })();
 
+/* ---------- Sound Engine (No external files, 100% reliable) ---------- */
+function playSuccessSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    const playBeep = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(ctx.currentTime + startTime);
+      osc.stop(ctx.currentTime + startTime + duration);
+    };
+
+    playBeep(1200, 0, 0.1);
+    playBeep(1600, 0.12, 0.15);
+  } catch (e) {
+    console.warn("Audio play failed:", e);
+  }
+}
+
 /* ---------- Type metadata ---------- */
-// ALL RETURNS ARE CREDITS: only genuine outflows (withdrawals, trade stakes, copy-out) are debits.
 const CREDIT_TYPES = new Set(['Deposit','Copy In','Bonus','Refund','Profit','Referral Bonus']);
-const DEBIT_TYPES  = new Set(['Withdrawal','Copy Out','Trade','Crypto','Forex']);
+// ✅ Using the original DEBIT_TYPES without 'Trade Result'
+const DEBIT_TYPES  = new Set(['Withdrawal','Copy Out','Trade','Crypto','Forex']); 
 const COPY_SVG = '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>';
 const TRADE_SVG = '<path d="M3 3v18h18M7 14l4-4 4 4 5-6"/>';
 const GIFT_SVG = '<path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>';
@@ -309,13 +341,21 @@ const TYPE_META = {
   'Referral Bonus': { iconClass:'bonus',      svg:GIFT_SVG,   label:'Referral Bonus', sublabel:'Reward' },
   'Bonus':          { iconClass:'bonus',      svg:GIFT_SVG,   label:'Bonus', sublabel:'Reward' },
   'Profit':         { iconClass:'bonus',      svg:GIFT_SVG,   label:'Profit Credited', sublabel:'Earnings' },
-  'Refund':         { iconClass:'deposit',    svg:'<path d="M12 19V5M5 12l7-7 7 7"/>', label:'Refund', sublabel:'Funds Returned' }
+  'Refund':         { iconClass:'deposit',    svg:'<path d="M12 19V5M5 12l7-7 7 7"/>', label:'Refund', sublabel:'Funds Returned' },
+  'Trade Result':   { iconClass:'trade',      svg:TRADE_SVG, label:'Trade Result', sublabel:'Closed Position' } 
 };
 const getTypeMeta = type => TYPE_META[type] || { iconClass:'trade', svg:'<path d="M3 3v18h18M9 9l6 6M15 9l-6 6"/>', label:type || 'Transaction', sublabel:'Transaction' };
 
-// Credit logic: every return is a credit. Only genuine outflows are debits.
+// ✅ FIX: Back to reading the amount as a positive number for all credits. 
+// Since 'Trade Result' is no longer in DEBIT_TYPES, it will default to the amount logic, which is exactly what we want.
 const isCredit = t => CREDIT_TYPES.has(t.type) ? true : DEBIT_TYPES.has(t.type) ? false : Number(t.amount) >= 0;
-const amtDisplay = t => t.amount_display || (Math.abs(parseFloat(t.amount) || 0)).toFixed(2);
+
+// ✅ FIX: Use Math.abs() to strip negative signs and display the full amount.
+const amtDisplay = t => {
+  const raw = String(t.amount_display || t.amount || '0').replace(/,/g, '');
+  return Math.abs(parseFloat(raw) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 const statusOf = t => (t.status || 'Approved').toLowerCase();
 const refOf = t => 'APX-' + (t.id != null ? String(t.id).toUpperCase().padStart(8, '0') : new Date(t.created_at).getTime().toString(36).toUpperCase());
 
@@ -324,28 +364,52 @@ let allTransactions = [];
 let viewList = [];
 let currentPage = 1;
 let statusFilter = 'all';
+let lastFetchedTopId = null; 
 const PAGE_SIZE = 5;
 
 /* ---------- Fetch ---------- */
-async function fetchAllTrades() {
+async function fetchAllTrades(isPoll = false) {
   const listContainer = document.getElementById('tradeHistoryList');
   try {
     const response = await fetch(`${API_BASE_URL}/transactions/${currentUser.id}`);
     const data = await response.json();
     if (!data.success || !data.transactions) throw new Error('bad response');
 
-    allTransactions = data.transactions.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const sorted = data.transactions.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    // Sound trigger logic
+    if (isPoll && sorted.length > 0) {
+        const newestId = sorted[0].id;
+        if (lastFetchedTopId !== null && newestId !== lastFetchedTopId) {
+            const newestType = sorted[0].type;
+            if (['Trade Result', 'Profit', 'Copy In'].includes(newestType)) {
+                playSuccessSound();
+                toast(`New ${getTypeMeta(newestType).label} added to history!`);
+            }
+        }
+        lastFetchedTopId = newestId;
+    } else if (!isPoll && sorted.length > 0) {
+        lastFetchedTopId = sorted[0].id;
+    }
+
+    allTransactions = sorted;
     document.getElementById('countTotal').innerText = allTransactions.length;
     document.getElementById('countApproved').innerText = allTransactions.filter(t => statusOf(t) === 'approved').length;
     document.getElementById('countPending').innerText = allTransactions.filter(t => statusOf(t) === 'pending').length;
     document.getElementById('countRejected').innerText = allTransactions.filter(t => statusOf(t) === 'rejected').length;
-    applyFilter();
+    
+    if (!isPoll || viewList.length !== allTransactions.length) {
+        applyFilter();
+    }
+
   } catch (error) {
-    console.error('Failed to fetch trades:', error);
-    document.getElementById('paginationBar').style.display = 'none';
-    listContainer.innerHTML = `<div class="empty-state" style="color:var(--primary-red)"><p>Failed to load your transactions.</p><button onclick="retry()">Try again</button></div>`;
+    if (!isPoll) {
+        console.error('Failed to fetch trades:', error);
+        document.getElementById('paginationBar').style.display = 'none';
+        listContainer.innerHTML = `<div class="empty-state" style="color:var(--primary-red)"><p>Failed to load your transactions.</p><button onclick="retry()">Try again</button></div>`;
+    }
   } finally {
-    hideLoader();
+    if (!isPoll) hideLoader();
   }
 }
 function retry() { showLoader(); fetchAllTrades(); }
@@ -363,7 +427,7 @@ function applyFilter() {
     return;
   }
   document.getElementById('paginationBar').style.display = 'flex';
-  renderTradePage(1);
+  renderTradePage(currentPage);
 }
 
 /* ---------- Render page ---------- */
@@ -432,13 +496,14 @@ function openReceipt(t) {
   const timeStr = isNaN(d) ? '—' : d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   const stLabel = s === 'approved' ? 'Completed' : s === 'pending' ? 'Pending' : 'Rejected';
   const stIcon = s === 'approved' ? CHECK : s === 'pending' ? CLOCK : CROSS;
+  
+  // ✅ FIX: Standardize the amount back to reading the whole amount
   const amount = amtDisplay(t);
 
   const extra = [];
   const add = (label, v) => { if (v !== undefined && v !== null && String(v).trim() !== '') extra.push([label, v]); };
   const methodRaw = String(t.method || t.payment_method || '');
   add('Method', /admin/i.test(methodRaw) ? '' : methodRaw);
-
   add('Network', t.network);
   add('Wallet / account', t.address || t.wallet_address || t.account);
   add('Pair', t.pair);
@@ -492,13 +557,11 @@ async function downloadReceipt() {
     if (!blob) throw new Error('Image could not be created');
     const file = new File([blob], name, { type: 'image/png' });
 
-    // Phones: open the share sheet so the user can Save Image / Save to Files
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: 'Receipt' }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
 
-    // Desktop / fallback: normal download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name;
@@ -545,10 +608,16 @@ document.querySelector('.back-btn').addEventListener('keydown', e => { if (e.key
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReceipt(); });
 
 window.addEventListener('load', () => {
-  // keep the loader visible briefly so it doesn't flash
   const minShow = new Promise(r => setTimeout(r, 700));
   Promise.all([fetchAllTrades(), minShow]);
 });
+
+// Poll every 10 seconds to check for new trades and play sound
+setInterval(() => {
+    if (document.hidden) return;
+    fetchAllTrades(true);
+}, 10000);
+
 </script>
 </body>
 </html>
