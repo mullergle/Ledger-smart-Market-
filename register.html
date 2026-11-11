@@ -354,6 +354,17 @@ input:focus-visible,select:focus-visible,.cta:focus-visible,.sso:focus-visible,a
   border-left:calc(3*var(--p)) solid var(--red);
   border-radius:calc(8*var(--p));
 }
+.success-box{
+  display:none;
+  color:var(--green);
+  font-size:calc(32*var(--p));
+  line-height:1.5;
+  margin:0 0 calc(28*var(--p));
+  padding:calc(18*var(--p)) calc(24*var(--p));
+  background:rgba(14,203,129,0.08);
+  border-left:calc(3*var(--p)) solid var(--green);
+  border-radius:calc(8*var(--p));
+}
 
 /* ===== VERIFY STEP ===== */
 .verify-title{
@@ -544,10 +555,23 @@ input:focus-visible,select:focus-visible,.cta:focus-visible,.sso:focus-visible,a
 const API_BASE_URL = 'https://apexline-market.onrender.com';
 
 const loader = document.getElementById('globalLoader');
-const showLoader = () => loader.classList.add('active');
-const hideLoader = () => loader.classList.remove('active');
+let loaderTimeout;
 
-if (localStorage.getItem('nexoraUser')) {
+const showLoader = () => {
+  loader.classList.add('active');
+  loaderTimeout = setTimeout(() => {
+    hideLoader();
+    showError(regErr, 'Connection timed out. Please try again.');
+  }, 15000);
+};
+
+const hideLoader = () => {
+  loader.classList.remove('active');
+  clearTimeout(loaderTimeout);
+};
+
+// Only redirect if user is logged in AND not on localhost (prevents local testing lockout)
+if (localStorage.getItem('nexoraUser') && !window.location.hostname.includes('localhost')) {
   window.location.replace('dashboard.html');
 }
 
@@ -570,6 +594,7 @@ const verifyEmailEl = document.getElementById('verifyEmail');
 function showError(el, msg){
   el.textContent = msg;
   el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -657,24 +682,16 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
       return;
     }
 
-    try {
-      const loginRes = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: pendingEmail, password: document.getElementById('regPassword').value })
-      });
-      const loginData = await loginRes.json();
-      if (loginData.success) {
-        localStorage.setItem('nexoraUser', JSON.stringify(loginData.user));
-        localStorage.setItem('nexoraToken', loginData.token || 'true');
-        verifyBtnText.textContent = 'Success! Redirecting…';
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
-        return;
-      }
-    } catch (loginErr) {}
-
+    // ✅ SUCCESS: Redirect to login page, do NOT auto-login
     verifyBtnText.textContent = 'Account created!';
-    setTimeout(() => { window.location.href = 'login.html'; }, 800);
+    
+    // Optional: show a temporary success message before redirecting
+    const successBox = document.createElement('div');
+    successBox.className = 'success-box';
+    successBox.textContent = 'Account verified successfully! Redirecting to login…';
+    document.getElementById('verifyForm').insertBefore(successBox, verifyErr);
+    
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
 
   } catch (err) {
     hideLoader();
@@ -688,27 +705,24 @@ document.getElementById('verifyCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') verifyBtn.click();
 });
 
-document.getElementById('google').addEventListener('click', async () => {
+// --- GOOGLE (Disabled) ---
+document.getElementById('google').addEventListener('click', () => {
   showLoader();
-  try {
-    const SUPABASE_URL = 'https://pjxhrnivrhnnnbpnduwh.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_8yA4Ly2r0P2LfP17Nl-Omg_5q3pfkhN';
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth-callback.html', queryParams: { prompt: 'select_account' } }
-    });
-  } catch (err) {
+  setTimeout(() => {
     hideLoader();
-    regErr.textContent = 'Unable to connect to Google.';
+    regErr.textContent = 'Failed. Please try again.';
     regErr.style.display = 'block';
-  }
+  }, 1500);
 });
 
+// --- APPLE (Disabled) ---
 document.getElementById('apple').addEventListener('click', () => {
-  regErr.textContent = 'Apple Sign-In is coming soon.';
-  regErr.style.display = 'block';
+  showLoader();
+  setTimeout(() => {
+    hideLoader();
+    regErr.textContent = 'Failed. Please try again.';
+    regErr.style.display = 'block';
+  }, 1500);
 });
 </script>
 </body>
