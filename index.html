@@ -5,34 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ledger Smart Market | Professional Trading Platform</title>
 
-    <script>
-    (function () {
-      const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-      const WARN_BEFORE_MS = 2 * 60 * 1000;
-      const LOGIN_PAGE = 'login.html';
-      const LAST_SEEN_KEY = 'nexoraLastSeen';
-      const WRITE_THROTTLE_MS = 30_000;
-      const currentPage = location.pathname.split('/').pop() || 'index.html';
-      const isLoginPage = currentPage === LOGIN_PAGE;
-      const clearAuth = () => { ['nexoraUser','nexoraToken','nexoraJoinedAt','nexoraLastSeen'].forEach(k => localStorage.removeItem(k)); sessionStorage.removeItem('nexoraState'); };
-      const logout = () => { clearAuth(); if (!isLoginPage) location.replace(LOGIN_PAGE); };
-      const isExpired = (t) => t && (Date.now() - t) > IDLE_TIMEOUT_MS;
-      
-      if (!isLoginPage && !localStorage.getItem('nexoraUser')) { 
-          location.replace(LOGIN_PAGE); 
-          return; 
-      }
-
-      const lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
-      if (isExpired(lastSeen)) { logout(); return; }
-      let lastWrite = 0;
-      const touch = () => { const t = Date.now(); if (t - lastWrite < WRITE_THROTTLE_MS) return; lastWrite = t; localStorage.setItem(LAST_SEEN_KEY, String(t)); };
-      localStorage.setItem(LAST_SEEN_KEY, String(Date.now())); lastWrite = Date.now();
-      ['click','keydown','scroll','touchstart','pointerdown'].forEach(evt => window.addEventListener(evt, touch, { passive: true }));
-      document.addEventListener('visibilitychange', () => { if (document.hidden) return; const t = Number(localStorage.getItem(LAST_SEEN_KEY) || 0); if (isExpired(t)) logout(); });
-      window.addEventListener('pageshow', (e) => { if (e.persisted && !localStorage.getItem('nexoraUser')) location.replace(LOGIN_PAGE); });
-    })();
-    </script>
+    
 
     <link rel="preconnect" href="https://s3.tradingview.com" crossorigin>
     <link rel="preconnect" href="https://s.tradingview.com" crossorigin>
@@ -70,6 +43,7 @@
         html { scroll-behavior: smooth; }
         body { background-color: var(--darker-bg); color: var(--text-white); line-height: 1.6; overflow-x: hidden; transition: direction 0.3s ease; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         
+
         body[dir="rtl"] { direction: rtl; text-align: right; }
         body[dir="rtl"] .chat-btn { right: auto; left: 20px; }
         body[dir="rtl"] .nav-arrow.left { left: auto; right: 0; transform: rotate(180deg); }
@@ -84,6 +58,7 @@
         ul { list-style: none; }
         button { font-family: inherit; cursor: pointer; border: none; background: none; }
 
+        /* ============ LEDGER LOGO ============ */
         .ltm-logo { width: 46px; height: 46px; flex-shrink: 0; display: block; filter: drop-shadow(0 4px 14px rgba(240,185,11,0.35)); }
         .ltm-logo.splash { width: 92px; height: 92px; margin-bottom: 22px; filter: drop-shadow(0 0 28px rgba(240,185,11,0.5)); animation: brandSplashFadeIn 0.7s ease-out both; }
 
@@ -106,6 +81,7 @@
 
         .logo-container { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 
+        /* ============ LOADER ============ */
         .global-loader-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(11,11,11,0.85);
@@ -165,14 +141,14 @@
         .sidebar ul li a:hover::after { color: var(--primary-bright); transform: translateX(3px); }
         .sidebar ul li:last-child a { border-bottom: none; }
 
-       /* ===== UPDATED AUTH SECTION ===== */
-        .auth-section { display: flex; padding: 8px 16px; gap: 10px; background: var(--dark-bg); border-bottom: 1px solid var(--border-subtle); flex-direction: row; }
-        .btn-auth { flex: 1; padding: 10px 4px; text-align: center; font-weight: 600; font-size: 11.5px; border-radius: var(--radius-sm); display: flex; justify-content: center; align-items: center; gap: 6px; transition: all 0.2s; letter-spacing: 0.3px; }
-        .btn-google { border: 1px solid var(--border-color); color: var(--text-white); background: var(--panel-bg); }
-        .btn-google:hover { border-color: rgba(240,185,11,0.45); background: #1c1c22; }
-        .btn-icloud { background: var(--text-white); color: #000; border: 1px solid var(--text-white); }
-        .btn-icloud:hover { background: #e0e0e0; }
-        .icon-sso { width: 14px; height: 14px; flex-shrink: 0; }
+        .auth-section { display: flex; padding: 15px 20px; gap: 15px; background: var(--dark-bg); border-bottom: 1px solid var(--border-subtle); }
+        .btn { flex: 1; padding: 13px; text-align: center; font-weight: 700; font-size: 14px; border-radius: var(--radius-sm); display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn-outline { border: 1px solid var(--primary-bright); color: var(--primary-bright); background: transparent; }
+        .btn-outline:hover { background: rgba(240,185,11,0.08); box-shadow: 0 0 20px var(--primary-glow); }
+        .btn-solid { background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; border: 1px solid var(--primary-bright); box-shadow: 0 4px 15px var(--primary-glow); }
+        .btn-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 22px var(--primary-glow); }
+        .icon-user { width: 16px; height: 16px; fill: currentColor; }
+
         .tv-ticker-section { background: #08080a; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); margin-top: 15px; position: relative; overflow: hidden; min-height: 46px; display: flex; align-items: center; }
         .tv-ticker-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 50% 0%, rgba(240,185,11,0.08), transparent 70%); pointer-events: none; z-index: 0; }
         .tv-ticker-section .tradingview-widget-container { position: relative; z-index: 1; width: 100%; }
@@ -344,6 +320,12 @@
         .login-prompt { color: #aaa; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
         .login-prompt a { color: var(--primary-bright); font-weight: 700; cursor: pointer; }
 
+        .language-selector { background: #fff; border: 1px solid #ccc; border-radius: var(--radius-sm); padding: 8px 12px; display: flex; align-items: center; gap: 8px; color: #333; font-size: 14px; cursor: pointer; position: relative; transition: background 0.2s; }
+        .language-selector:hover { background: #f0f0f0; }
+        .language-selector svg { width: 20px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+        .language-selector select { background: transparent; border: none; color: #333; font-size: 14px; appearance: none; outline: none; cursor: pointer; padding-right: 15px; font-weight: 500; }
+        .language-selector::after { content: '⌄'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #333; pointer-events: none; font-size: 16px; font-weight: bold; }
+
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(8px); }
         .modal-overlay.active { display: flex; }
         .modal-content { background: linear-gradient(180deg, var(--panel-bg), var(--panel-elevated)); width: 100%; max-width: 420px; padding: 40px 30px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); position: relative; animation: modalPop 0.3s ease-out; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow: hidden; }
@@ -355,6 +337,60 @@
         .modal-header .modal-logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .modal-header .modal-logo h2 { color: var(--primary-bright); font-size: 20px; letter-spacing: 2px; }
         .modal-header p { color: var(--text-gray); font-size: 14px; }
+        .form-group { margin-bottom: 20px; position: relative; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-gray); margin-bottom: 8px; font-weight: 500;}
+        .form-group input { width: 100%; padding: 14px 15px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: white; font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-group input:focus { border-color: var(--primary-bright); box-shadow: 0 0 0 3px rgba(240,185,11,0.15); }
+        .password-toggle { position: absolute; right: 15px; top: 38px; color: var(--text-gray); cursor: pointer; font-size: 12px; font-weight: 600; }
+        .modal-content .btn-submit { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--primary-bright), #fcd535); color: #0a0a0a; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 18px var(--primary-glow); }
+        .modal-content .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+        .modal-switch { text-align: center; font-size: 13px; color: var(--text-gray); }
+        .modal-switch a { color: var(--primary-bright); font-weight: 600; cursor: pointer; }
+
+        /* ============ REMEMBER ME CHECKBOX ============ */
+        .remember-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            user-select: none;
+            width: fit-content;
+        }
+        .remember-row input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-bg);
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .remember-row input[type="checkbox"]:checked {
+            background: var(--primary-bright);
+            border-color: var(--primary-bright);
+        }
+        .remember-row input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            width: 4px;
+            height: 8px;
+            border: solid #0a0a0a;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .remember-row span {
+            font-size: 13px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
 
         .pro-alert-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(11,11,11,0.88); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; padding: 24px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s; }
         .pro-alert-overlay.active { opacity: 1; visibility: visible; }
@@ -432,6 +468,7 @@
             .login-required-desc { font-size: 13.5px; margin-bottom: 24px; }
         }
 
+/* LEDGER aligned to SMART MARKET width */
 .logo-text, .brand-splash-text { display: inline-flex; flex-direction: column; align-items: stretch; }
 .logo-text h1, .brand-splash-text h1 { display: flex; justify-content: space-between; letter-spacing: 0 !important; font-weight: 800 !important; padding: 0 !important; line-height: 1; background: linear-gradient(90deg, #f0b90b, #fcd535) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: #f0b90b; filter: none !important; text-shadow: none; }
 .logo-text h1 { font-size: 21px !important; }
@@ -439,6 +476,7 @@
 .logo-text h1 span, .brand-splash-text h1 span { display: block; font-size: inherit; font-weight: inherit; letter-spacing: 0; margin: 0; padding: 0; color: inherit; -webkit-text-fill-color: inherit; }
 .logo-text > span, .brand-splash-text > span { text-align: justify; text-align-last: justify; margin-right: 0 !important; padding-left: 0 !important; color: #9d9d9d; }
 .brand-splash-text > span { letter-spacing: 6px; }
+/* black gradient surfaces */
 body { background: linear-gradient(180deg, #131315 0%, #070708 45%, #030303 100%) fixed; }
 .section-dark { background: linear-gradient(180deg, #101012, #050505); }
 header { background: rgba(10,10,12,0.86); }
@@ -446,6 +484,7 @@ header { background: rgba(10,10,12,0.86); }
 
     </style>
 
+    <!-- ===== NO ZOOM / NO SHIFT + GOOGLE BUTTON STYLES ===== -->
     <style>
     html, body { max-width: 100%; overflow-x: hidden; overscroll-behavior-x: none; overscroll-behavior-y: none; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 0; background-color: #050505; }
     input, select, textarea,
@@ -462,6 +501,7 @@ header { background: rgba(10,10,12,0.86); }
 </head>
 <body>
 
+    <!-- Gold gradient defs for the LEDGER logo -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
         <defs>
             <linearGradient id="ltmMetal" x1="0" y1="0" x2="1" y2="1">
@@ -490,6 +530,7 @@ header { background: rgba(10,10,12,0.86); }
         <div class="brand-splash-bar"></div>
     </div>
 
+    <!-- iOS-STYLE 3-DOT SPINNER -->
     <div class="global-loader-overlay" id="globalLoader">
         <div class="ios-spinner">
             <div class="dot"></div>
@@ -524,23 +565,14 @@ header { background: rgba(10,10,12,0.86); }
         </button>
     </header>
 
-    <!-- AUTH SECTION -->
     <div class="auth-section">
-        <a href="#" class="btn-auth btn-google" onclick="continueWithGoogle(event)">
-            <svg class="icon-sso" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/>
-                <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/>
-                <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
-            </svg>
-            <span>Continue with Google</span>
+        <a href="login.html" class="btn btn-outline">
+            <svg class="icon-user" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span data-i18n="btn_signin">SIGN IN</span>
         </a>
-        <a href="#" class="btn-auth btn-icloud" onclick="continueWithICloud(event)">
-
-            <svg class="icon-sso" viewBox="0 0 24 28" style="fill:#000;">
-                <path d="M19.6 14.9c0-3 2.5-4.5 2.6-4.6-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-.9 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.1 3.7-.5 9.2 1.5 12.2 1 1.5 2.2 3.1 3.8 3 1.5-.1 2.1-1 3.9-1s2.4 1 4 1c1.7 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.3 1.7-3.4-.1 0-3.2-1.2-3.2-4.9zM16.6 5.9c.8-1 1.4-2.4 1.2-3.9-1.2.1-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.7 1.4.1 2.8-.7 3.7-1.6z"/>
-            </svg>
-            <span>Continue with iCloud</span>
+        <a href="register.html" class="btn btn-solid">
+            <svg class="icon-user" viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span data-i18n="btn_register">REGISTER</span>
         </a>
     </div>
 
@@ -562,15 +594,15 @@ header { background: rgba(10,10,12,0.86); }
             <div class="hero-slider">
                 <div class="hero-slide active">
                     <h2><span class="orange">BITCOIN</span> <span data-i18n="hero_1">TRADING YOU CAN TRUST</span></h2>
-                    <button class="btn-start-trading" onclick="window.location.href='login.html'" data-i18n="btn_start">START TRADING</button>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
                 </div>
                 <div class="hero-slide">
                     <h2><span class="orange">SMART TRADES</span> <span data-i18n="hero_2">BOLD MOVES</span></h2>
-                    <button class="btn-start-trading" onclick="window.location.href='login.html'" data-i18n="btn_start">START TRADING</button>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
                 </div>
                 <div class="hero-slide">
                     <h2><span data-i18n="hero_3">EXCELLENCE IN EVERY TRADE</span></h2>
-                    <button class="btn-start-trading" onclick="window.location.href='login.html'" data-i18n="btn_start">START TRADING</button>
+                    <button class="btn-start-trading" onclick="window.location.href='register.html'" data-i18n="btn_start">START TRADING</button>
                 </div>
             </div>
         </div>
@@ -646,7 +678,7 @@ header { background: rgba(10,10,12,0.86); }
     <div class="cta-banner">
         <h3 data-i18n="cta_title">Ready to start your journey?</h3>
         <p data-i18n="cta_desc">Join thousands of traders worldwide on Ledger Smart Market.</p>
-        <button class="btn btn-solid" onclick="window.location.href='login.html'" data-i18n="btn_create_account">GET STARTED</button>
+        <button class="btn btn-solid" onclick="window.location.href='register.html'" data-i18n="btn_create_account">CREATE FREE ACCOUNT</button>
     </div>
 
     <footer class="footer">
@@ -705,17 +737,6 @@ header { background: rgba(10,10,12,0.86); }
 
    <script>
         const API_BASE_URL = 'https://apexline-market.onrender.com';
-
-        function showICloudError(e) {
-            if(e) e.preventDefault();
-            showProAlert({
-                title: "iCloud ID Not Found",
-                message: "We couldn't find an active iCloud session on this device. Please try again or use <strong>Continue with Google</strong>.",
-                buttonText: "Try Again",
-                variant: "error",
-                onClose: function() {}
-            });
-        }
 
         const loader = document.getElementById('globalLoader');
         function showLoader() { loader.classList.add('active'); }
@@ -778,6 +799,50 @@ header { background: rgba(10,10,12,0.86); }
             else injectTicker();
         })();
 
+        const translations = {
+            en: { menu_title: "LEDGER MENU", nav_home: "Home", nav_features: "Features", nav_insights: "Market Insights", nav_how: "How It Works", nav_faq: "FAQ", btn_signin: "SIGN IN", btn_register: "REGISTER", btn_start: "START TRADING", btn_create_account: "CREATE FREE ACCOUNT", hero_1: "TRADING YOU CAN TRUST", hero_2: "BOLD MOVES", hero_3: "EXCELLENCE IN EVERY TRADE", discover_title: "Discover <span>Ledger</span>", carousel_1_title: "Advanced Charting Tools", carousel_1_desc: "Access professional-grade technical analysis tools directly in your browser.", carousel_2_title: "Real-Time Analytics", carousel_2_desc: "Make informed decisions with up-to-the-second market data and order book depth.", carousel_3_title: "Bank-Grade Security", carousel_3_desc: "Your assets are protected with multi-signature wallets and cold storage.", why_title: "Why Trade With <span>Ledger</span>", feat_1_title: "Secure Platform", feat_1_desc: "Bank-grade encryption and cold storage keeping your funds safe.", feat_2_title: "Fast Execution", feat_2_desc: "Lightning-fast order execution with minimal slippage on all trades.", feat_3_title: "24/7 Support", feat_3_desc: "Dedicated support team available around the clock to assist you.", feat_4_title: "Low Fees", feat_4_desc: "Industry leading low spreads and zero hidden fees on deposits.", insights_title: "Market <span>Insights</span>", insight_1_title: "Bitcoin Surges", insight_1_desc: "BTC breaks resistance at $82K as institutional demand increases.", insight_1_tag: "Bullish Signal", insight_2_title: "EUR/USD Volatility", insight_2_desc: "Euro gains momentum ahead of ECB policy meeting this week.", insight_2_tag: "Watch Closely", insight_3_title: "US 100 Outlook", insight_3_desc: "Tech stocks lead rally as earnings season kicks off strong.", insight_3_tag: "Positive Trend", insight_4_title: "ETH Upgrade", insight_4_desc: "Ethereum network upgrade promises lower gas fees and faster txs.", insight_4_tag: "Innovation", how_title: "How To <span>Start</span>", step_1_title: "Create an Account", step_1_desc: "Sign up in minutes with your email address and verify your identity securely.", step_2_title: "Fund Your Wallet", step_2_desc: "Deposit funds using crypto, bank transfer, or supported credit cards instantly.", step_3_title: "Start Trading", step_3_desc: "Access global markets, analyze charts, and execute trades from your mobile device.", trusted_title: "Trusted by <span>Traders</span>", testimonial_1: '"Ledger has completely changed how I view crypto trading. The interface is clean and execution is instant."', testimonial_2: '"The customer support is unreal. I had an issue with a withdrawal and it was resolved in under 10 minutes."', verified_trader: "Verified Trader", pro_trader: "Pro Trader", faq_title: "Frequently Asked <span>Questions</span>", faq_1_q: "Is Ledger regulated?", faq_1_a: "Yes, Ledger operates under strict regulatory compliance in multiple jurisdictions to ensure the safety of our users' funds and data.", faq_2_q: "What are the trading fees?", faq_2_a: "We offer highly competitive maker/taker fees starting from 0.1%. Volume discounts are available for high-frequency traders.", faq_3_q: "How long do deposits take?", faq_3_a: "Crypto deposits are usually instant after network confirmation. Fiat bank transfers may take 1-3 business days depending on your bank.", cta_title: "Ready to start your journey?", cta_desc: "Join thousands of traders worldwide on Ledger Smart Market.", foot_company: "Company", foot_about: "About Us", foot_careers: "Careers", foot_press: "Press", foot_support: "Support", foot_help: "Help Center", foot_api: "API Docs", foot_fees: "Fees", foot_legal: "Legal", foot_terms: "Terms of Service", foot_privacy: "Privacy Policy", foot_risk: "Risk Warning", foot_disclaimer: "Trading cryptocurrencies and derivatives involves significant risk and can result in the loss of your invested capital. Past performance is not indicative of future results. Please ensure you fully understand the risks involved and seek independent advice if necessary.", foot_copy: "&copy; 2024 Ledger Smart Market. All rights reserved." }
+        };
+
+        const languageSelect = document.getElementById('languageSelect');
+        const currentLangFlag = document.getElementById('currentLangFlag');
+
+        function changeLanguage(lang) {
+            if (lang === 'ar') document.body.setAttribute('dir', 'rtl');
+            else document.body.removeAttribute('dir');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) el.innerHTML = translations[lang][key];
+                else if (translations['en'][key]) el.innerHTML = translations['en'][key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (translations[lang] && translations[lang][key]) el.placeholder = translations[lang][key];
+                else if (translations['en'][key]) el.placeholder = translations['en'][key];
+            });
+            if (languageSelect) {
+                const flags = {
+                    en: '<rect width="24" height="24" fill="#012169"/><path d="M0 0L24 24M24 0L0 24" stroke="#fff" stroke-width="4"/><path d="M0 0L24 24M24 0L0 24" stroke="#C8102E" stroke-width="2"/><path d="M12 0v24M0 12h24" stroke="#fff" stroke-width="6"/><path d="M12 0v24M0 12h24" stroke="#C8102E" stroke-width="3"/>',
+                    es: '<rect width="24" height="24" fill="#C60B1E"/><rect y="6" width="24" height="12" fill="#FFC400"/>',
+                    fr: '<rect width="24" height="24" fill="#002395"/><rect x="8" width="8" height="24" fill="#fff"/><rect x="16" width="8" height="24" fill="#ED2939"/>',
+                    de: '<rect width="24" height="24" fill="#000"/><rect y="8" width="24" height="8" fill="#D00"/><rect y="16" width="24" height="8" fill="#FFCE00"/>',
+                    pt: '<rect width="24" height="24" fill="#046A38"/><rect width="10" height="24" fill="#DA020E"/><circle cx="10" cy="12" r="4" fill="#FFDF00"/>',
+                    it: '<rect width="24" height="24" fill="#009246"/><rect x="8" width="8" height="24" fill="#fff"/><rect x="16" width="8" height="24" fill="#CE2B37"/>',
+                    ru: '<rect width="24" height="24" fill="#fff"/><rect y="8" width="24" height="8" fill="#0039A6"/><rect y="16" width="24" height="8" fill="#D52B1E"/>',
+                    zh: '<rect width="24" height="24" fill="#DE2910"/><polygon points="5,3 6.5,8 2,5 8,5 3.5,8" fill="#FFDE00"/>',
+                    ja: '<rect width="24" height="24" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#BC002D"/>',
+                    ar: '<rect width="24" height="24" fill="#006C35"/><path d="M6 10h12M6 14h12" stroke="#fff" stroke-width="1.5"/>'
+                };
+                currentLangFlag.innerHTML = flags[lang] || flags['en'];
+            }
+            localStorage.setItem('preferredLanguage', lang);
+        }
+        const savedLang = localStorage.getItem('preferredLanguage') || 'en';
+        if (languageSelect) {
+            languageSelect.value = savedLang;
+            changeLanguage(savedLang);
+            languageSelect.addEventListener('change', (e) => { changeLanguage(e.target.value); });
+        }
+
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -836,32 +901,37 @@ header { background: rgba(10,10,12,0.86); }
         }
         setTimeout(showToast, 2000);
 
+        
         (function () {
             const splash = document.getElementById('brandSplash');
             if (!splash) return;
             
+            // ✅ CHECK IF WE SHOULD SKIP THE SPLASH
             const urlParams = new URLSearchParams(window.location.search);
             const skipSplash = urlParams.get('skipSplash');
             const scrollPos = urlParams.get('scrollPos');
 
             if (skipSplash === 'true') {
+                // Instantly remove splash without animation
                 splash.classList.add('nexora-hide');
                 setTimeout(() => {
                     if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 10);
+                }, 10); // 10ms to allow the DOM to remove it
                 
+                // ✅ RESTORE SCROLL POSITION
                 if (scrollPos) {
                     setTimeout(() => {
                         window.scrollTo({
                             top: parseInt(scrollPos, 10),
                             behavior: 'instant' 
                         });
-                    }, 150);
+                    }, 150); // Wait 150ms for the page to lay out
                 }
                 
-                return;
+                return; // Exit early so the timer doesn't run
             }
 
+            // --- NORMAL SPLASH LOGIC ---
             const MIN_DISPLAY_MS = 900; const FADE_MS = 500;
             const startTime = Date.now();
             function hideSplash() {
@@ -886,6 +956,8 @@ header { background: rgba(10,10,12,0.86); }
             }, 4000);
         })();
 
+
+
         (function () {
             const chatBtn = document.getElementById('publicChatBtn');
             const loginRequiredModal = document.getElementById('loginRequiredModal');
@@ -904,7 +976,7 @@ header { background: rgba(10,10,12,0.86); }
             const refCode = urlParams.get('ref');
             if (refCode) {
                 localStorage.setItem('nexoraReferral', refCode);
-                window.location.href = 'login.html?ref=' + encodeURIComponent(refCode);
+                window.location.href = 'register.html?ref=' + encodeURIComponent(refCode);
             }
         });
     </script>
@@ -919,10 +991,12 @@ document.querySelectorAll('.logo-text h1, .brand-splash-text h1').forEach(h => {
 
 <!-- ===== LEDGER WOW ADD-ON ===== -->
 <style>
+/* progress bar + header */
 #apxProgress{position:fixed;top:0;left:0;height:3px;width:100%;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,#b98a08,#f0b90b,#fcd535);z-index:10001;box-shadow:0 0 12px rgba(240,185,11,0.6)}
 header{transition:background .3s,box-shadow .3s}
 header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0,0,.5),0 1px 0 rgba(240,185,11,0.25)}
 
+/* hero decoration */
 .apx-deco{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .apx-deco::after{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--gx,50%) var(--gy,35%),rgba(240,185,11,0.18),transparent 60%)}
 .apx-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:apxFloat 12s ease-in-out infinite}
@@ -936,12 +1010,14 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 @keyframes apxFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-26px)}}
 @keyframes apxDraw{0%{stroke-dashoffset:1000;opacity:1}60%{stroke-dashoffset:0;opacity:1}90%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
 
+/* headline shimmer + button shine */
 .hero h2 span.orange{background-image:linear-gradient(90deg,#f0b90b,#fcd535,#fff,#f0b90b);background-size:200% auto;animation:apxShimmer 5s linear infinite}
 @keyframes apxShimmer{to{background-position:200% center}}
 .btn-solid,.btn-start-trading,.nexus-submit-btn,.btn-submit{position:relative;overflow:hidden}
 .btn-solid::after,.btn-start-trading::after,.nexus-submit-btn::after,.btn-submit::after{content:'';position:absolute;top:0;left:-120%;width:55%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:apxShine 4s ease-in-out infinite;pointer-events:none}
 @keyframes apxShine{0%,60%{left:-120%}100%{left:170%}}
 
+/* stats band */
 .apx-stats{position:relative;z-index:5;width:calc(100% - 32px);max-width:960px;margin:-70px auto 10px;padding:26px 14px 20px;background:linear-gradient(160deg,rgba(27,25,18,.95),rgba(21,19,12,.95));border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel),0 0 60px rgba(240,185,11,0.15);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .apx-stats::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#f0b90b,#fcd535,transparent)}
 .apx-grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:20px 10px}
@@ -953,11 +1029,13 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 .apx-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#f0b90b;box-shadow:0 0 8px #f0b90b}
 @media(min-width:768px){.apx-grid4{grid-template-columns:repeat(4,1fr)}.apx-n{font-size:36px}}
 
+/* cards: spotlight + glow */
 .feature-card,.insight-card{position:relative;overflow:hidden}
 .feature-card::after,.insight-card::after{content:'';position:absolute;inset:0;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(240,185,11,0.14),transparent 65%);opacity:0;transition:opacity .3s;pointer-events:none}
 .feature-card:hover::after,.insight-card:hover::after{opacity:1}
 .feature-icon{filter:drop-shadow(0 0 10px rgba(240,185,11,0.45))}
 
+/* steps, dividers, CTA */
 .step-number{position:relative}
 .step-number::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(240,185,11,0.4);animation:apxPing 2.4s ease-out infinite}
 @keyframes apxPing{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.35);opacity:0}}
@@ -966,6 +1044,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 .cta-banner{animation:apxGlow 4s ease-in-out infinite}
 @keyframes apxGlow{0%,100%{box-shadow:0 0 30px rgba(240,185,11,0.1)}50%{box-shadow:0 0 70px rgba(240,185,11,0.28)}}
 
+/* scroll reveal */
 .apx-rv{opacity:0;transform:translateY(26px) scale(.98);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
 .apx-rv.apx-in{opacity:1;transform:none}
 
@@ -977,6 +1056,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
+  /* ---- EDIT THESE NUMBERS TO YOUR REAL ONES ---- */
   const STATS = [
     { p: '',  n: 250,  d: 0, s: 'K+', l: 'Active Traders' },
     { p: '$', n: 1.2,  d: 1, s: 'B+', l: 'Trading Volume' },
@@ -985,6 +1065,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
   ];
   const PILLS = ['Bank-grade encryption', 'Cold-storage custody', '24/7 live support', 'Fast execution'];
 
+  /* ---- progress bar + header glow ---- */
   const bar = document.createElement('div'); bar.id = 'apxProgress'; document.body.appendChild(bar);
   const header = $('header');
   function onScroll() {
@@ -994,6 +1075,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
   }
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
+  /* ---- hero: orbs, grid, chart line, particles ---- */
   const hero = $('.hero');
   if (hero) {
     const deco = document.createElement('div'); deco.className = 'apx-deco';
@@ -1044,6 +1126,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     }
   }
 
+  /* ---- stats band (inserted right after the hero) ---- */
   const firstSection = $('.section');
   if (firstSection) {
     const band = document.createElement('div'); band.className = 'apx-stats';
@@ -1068,6 +1151,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     cio.observe(band);
   }
 
+  /* ---- card spotlight follows the cursor ---- */
   document.addEventListener('mousemove', e => {
     const c = e.target.closest && e.target.closest('.feature-card,.insight-card');
     if (!c) return;
@@ -1076,6 +1160,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     c.style.setProperty('--my', (e.clientY - r.top) + 'px');
   }, { passive: true });
 
+  /* ---- scroll reveal ---- */
   if (!reduce && 'IntersectionObserver' in window) {
     const sel = '.section-title,.carousel-container,.feature-card,.insight-card,.step-item,.testimonial-slider,.faq-item,.cta-banner,.apx-stats,.footer-col';
     const io = new IntersectionObserver(es => es.forEach(e => {
@@ -1095,6 +1180,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 
 <!-- ===== LEDGER WOW v2 ===== -->
 <style>
+/* ---------- slides: cinematic entrances ---------- */
 @keyframes apxRise{from{opacity:0;transform:translateY(38px);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
 .hero-slide.active h2{animation:apxRise 1s cubic-bezier(.16,1,.3,1) backwards}
 .hero-slide.active .btn-start-trading{animation:apxRise 1s .25s cubic-bezier(.16,1,.3,1) backwards}
@@ -1105,6 +1191,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 .carousel-slide.apx-on .slide-content h3{animation:apxRise .9s .1s cubic-bezier(.16,1,.3,1) backwards}
 .carousel-slide.apx-on .slide-content p{animation:apxRise .9s .3s cubic-bezier(.16,1,.3,1) backwards}
 .carousel-container{box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 70px rgba(240,185,11,0.2)}
+/* progress dots */
 .apx-dots{display:flex;gap:8px;z-index:6}
 .apx-dots button{position:relative;overflow:hidden;width:8px;height:8px;border-radius:8px;background:rgba(240,185,11,.28);transition:width .4s,background .3s}
 .apx-dots button.on{width:46px}
@@ -1113,6 +1200,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 .apx-hd{position:absolute;bottom:-48px;left:50%;transform:translateX(-50%)}
 .apx-cd{position:absolute;left:40px;bottom:30px}
 
+/* ---------- live Bitcoin ---------- */
 .apx-live{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:30px;font-size:12px;font-weight:700;color:#f0b90b;background:rgba(240,185,11,0.08);border:1px solid rgba(240,185,11,0.3)}
 .apx-live::before{content:'';width:8px;height:8px;border-radius:50%;background:#f0b90b;box-shadow:0 0 10px #f0b90b;animation:apxBlink 1.6s infinite}
 @keyframes apxBlink{50%{opacity:.3}}
@@ -1139,6 +1227,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
 (function () {
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
+  /* ---------- progress dots for both slide shows ---------- */
   function dots(parent, cls, n, dur, go) {
     const w = document.createElement('div'); w.className = 'apx-dots ' + cls; w.style.setProperty('--d', dur);
     for (let i = 0; i < n; i++) { const b = document.createElement('button'); b.setAttribute('aria-label', 'Slide ' + (i + 1)); b.onclick = () => go(i); w.appendChild(b); }
@@ -1170,6 +1259,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     sync();
   }
 
+  /* ---------- live Bitcoin section ---------- */
   const feat = document.getElementById('features');
   if (!feat) return;
   const SY = [['BTC', 'btcusdt', 'bitcoin', 'Bitcoin'], ['ETH', 'ethusdt', 'ethereum', 'Ethereum'], ['SOL', 'solusdt', 'solana', 'Solana'], ['BNB', 'bnbusdt', 'binancecoin', 'BNB']];
@@ -1180,6 +1270,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     '<div class="apx-frame" id="apxFrame"><div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div></div>';
   feat.parentNode.insertBefore(sec, feat);
 
+  /* big TradingView chart, loaded when you scroll near it */
   const fr = $('#apxFrame');
   new IntersectionObserver((es, o) => {
     if (!es[0].isIntersecting) return;
@@ -1190,6 +1281,7 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     fr.querySelector('.tradingview-widget-container__widget').appendChild(s);
   }, { rootMargin: '300px' }).observe(fr);
 
+  /* price tiles with sparklines */
   const hist = {};
   function spark(cv, h, up) {
     if (h.length < 2) return;
@@ -1211,9 +1303,11 @@ header.apx-scrolled{background:rgba(11,11,11,.94);box-shadow:0 8px 30px rgba(0,0
     spark(e.querySelector('canvas'), h, ch >= 0);
   }
 
+  /* instant sparkline history */
   SY.forEach(s => fetch('https://api.binance.com/api/v3/klines?symbol=' + s[1].toUpperCase() + '&interval=15m&limit=40')
     .then(r => r.json()).then(k => { if (!hist[s[0]] || hist[s[0]].length < 3) { hist[s[0]] = k.map(c => +c[4]); const h = hist[s[0]]; spark($('#apx-' + s[0] + ' canvas'), h, h[h.length - 1] >= h[0]); } }).catch(() => {}));
 
+  /* live stream, with CoinGecko fallback */
   let got = false, polling = false;
   function poll() {
     if (polling) return; polling = true;
@@ -1242,61 +1336,16 @@ document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, 
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Find the About Us link in the footer
         const aboutLinks = document.querySelectorAll('a[href="about.html"]');
         
         aboutLinks.forEach(link => {
             link.addEventListener('click', () => {
+                // Save the current Y scroll position to session memory
                 sessionStorage.setItem('aboutScrollPos', window.scrollY);
             });
         });
     });
-</script>
-
-<script>
-async function continueWithGoogle(e) {
-    if(e) e.preventDefault();
-    
-    // Show the loading spinner
-    document.getElementById('globalLoader').classList.add('active');
-    
-    try {
-        const SUPABASE_URL = 'https://pjxhrnivrhnnnbpnduwh.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_8yA4Ly2r0P2LfP17Nl-Omg_5q3pfkhN';
-        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Trigger the Google OAuth flow
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { 
-                redirectTo: window.location.origin + '/auth-callback.html', 
-                queryParams: { prompt: 'select_account' } 
-            }
-        });
-    } catch (err) {
-        // Hide spinner if something fails
-        document.getElementById('globalLoader').classList.remove('active');
-        alert('Unable to connect to Google. Please try again.');
-    }
-}
-</script>
-
-<script>
-function continueWithICloud(e) {
-    if(e) e.preventDefault();
-    
-    // 1. Show the loading spinner
-    document.getElementById('globalLoader').classList.add('active');
-    
-    // 2. Wait for 5 seconds
-    setTimeout(() => {
-        // 3. Hide spinner
-        document.getElementById('globalLoader').classList.remove('active');
-        
-        // 4. Show the error alert
-        showICloudError();
-    }, 5000);
-}
 </script>
 
 </body>
